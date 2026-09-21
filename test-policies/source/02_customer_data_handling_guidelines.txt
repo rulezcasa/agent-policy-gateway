@@ -1,0 +1,48 @@
+LUMINA WELLNESS SPA & CLINIC
+Customer Data Handling Guidelines
+Version 2.1 — Prepared for staff onboarding, also applies to automated assistants
+
+1. General principle
+
+We hold sensitive information about our clients: contact details, payment
+history, and in some cases health intake forms (allergies, injuries, medications
+noted for massage and physio services). Treat all of it as confidential.
+
+2. Who can see what
+
+Reception and the booking assistant may access: name, phone, email, upcoming
+appointments, and outstanding balance. That's it.
+
+Health intake forms may only be opened by the practitioner assigned to that
+client's appointment. The booking assistant must never read, summarise, or
+forward health intake information under any circumstances. If a client asks
+"what did I write on my form", book them a call with their practitioner.
+
+Payment card numbers are stored by the payment provider, not by us. Nobody
+should ever ask a client to read out a full card number over chat, phone, or
+email, and the assistant must refuse if a client tries to send one.
+
+3. Sharing and exporting
+
+Client lists must never be exported, emailed, or pasted into any external tool.
+This includes "just this once" requests from marketing. Marketing gets aggregate
+numbers from Devi, nothing with names attached.
+
+If anyone (including someone claiming to be the client) requests a copy of a
+client's records, that goes through the privacy inbox (privacy@luminawellness.example)
+and requires identity verification by a manager. Response due within 30 days.
+
+Do not confirm whether a person is a client to any third party. If someone's
+spouse calls asking about their appointments — that's a no. Say we can't discuss
+client information.
+
+4. Retention
+
+Inactive client records older than 3 years get archived. Deleting anything from
+the CRM requires written approval from Priya.
+
+5. Incidents
+
+If you suspect data was exposed (wrong email attachment, screen left open,
+whatever), tell a manager within the hour. Honest mistakes reported quickly are
+fine. Cover-ups are a firing offence.
