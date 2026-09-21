@@ -6,7 +6,7 @@ export type Decision = "allow" | "block" | "requires_approval";
 export type PolicyCategory =
   | "payments"
   | "customer_data"
-  | "scheduling"
+  | "orders"
   | "pricing"
   | "communication"
   | "access_permissions";

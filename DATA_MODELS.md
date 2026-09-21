@@ -41,7 +41,7 @@ Stores the original upload (the design doc requires keeping both original + norm
   "doc_id": "doc_001",
   "filename": "01_refunds_and_payments_policy.pdf",
   "uploaded_at": "2026-09-21T10:00:00Z",
-  "raw_text": "LUMINA WELLNESS SPA & CLINIC\nInternal Memo — ...",
+  "raw_text": "MAPLEWOOD HOME & LIVING\nInternal Memo — ...",
   "status": "extracted"   // uploaded | extracting | extracted | failed
 }
 ```
@@ -77,7 +77,7 @@ Field by field:
 |---|---|
 | `policy_id` | Unique ID. Decisions reference it, flag cards link to it. |
 | `name` | Human-readable title shown in the UI. |
-| `category` | One of six: `payments`, `customer_data`, `scheduling`, `pricing`, `communication`, `access_permissions`. Assigned by the LLM at ingestion; used for UI filtering and as a retrieval fallback key. |
+| `category` | One of six: `payments`, `customer_data`, `orders`, `pricing`, `communication`, `access_permissions`. Assigned by the LLM at ingestion; used for UI filtering and as a retrieval fallback key. |
 | `subject.roles` | Who the rule binds (`ai_agent`, `support_agent`, ...). A rule limiting the assistant needn't bind a human manager. Matched against `AgentAction.actor_role`. |
 | `action` | The tool/action this rule governs (`issue_refund`). Primary retrieval key: an incoming `issue_refund` call fetches all active policies with this action. |
 | `conditions` | Array of machine-checkable tests (see below). **All** must hold for the rule to trigger. Empty array = rule always applies to this action (e.g. "no price matching, ever"). |
@@ -93,7 +93,7 @@ Field by field:
 
 | Field | Meaning |
 |---|---|
-| `field` | Which key of the action's `arguments` to inspect (`amount`, `discount_percent`, `hours_until_appointment`). |
+| `field` | Which key of the action's `arguments` to inspect (`amount`, `discount_percent`, `days_since_purchase`). |
 | `operator` | Comparison: `>`, `>=`, `<`, `<=`, `==`, `!=`, `in`. Plain string, engine implements the small set we need. |
 | `value` | Threshold or expected value (`100`, `20`, `"gift_card"`). |
 | `unit` | Optional, for display: `USD`, `percent`, `hours`. Lets the UI say "$100" instead of "100". |
@@ -110,7 +110,7 @@ Field by field:
   "arguments": { "customer_id": "cust_193", "amount": 150, "currency": "USD" },
   "context": {
     "conversation_id": "conv_4821",
-    "reason": "appointment cancellation",
+    "reason": "defective item return",
     "previous_actions": []
   },
   "timestamp": "2026-09-21T11:32:00Z"
@@ -120,7 +120,7 @@ Field by field:
 | Field | Meaning |
 |---|---|
 | `action_id` | Unique ID for this attempt. Decisions and approvals point back to it. |
-| `agent_id` | Which agent made the call (`booking_agent`, `support_agent`). |
+| `agent_id` | Which agent made the call (`order_agent`, `support_agent`). |
 | `actor_role` | The role the agent acts under; matched against `Policy.subject.roles`. |
 | `tool` | The MCP tool being invoked. |
 | `action` | The semantic action. Often equals `tool`, but a generic tool (`send_message`) may carry a more specific action (`send_marketing_message`). |

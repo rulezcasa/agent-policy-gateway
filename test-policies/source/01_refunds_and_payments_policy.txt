@@ -1,4 +1,4 @@
-LUMINA WELLNESS SPA & CLINIC
+MAPLEWOOD HOME & LIVING
 Internal Memo — Refunds, Payments & Discounts
 Last updated: March 2026 (supersedes the Jan 2024 version, please discard old copies)
 
@@ -10,34 +10,34 @@ the support desk INCLUDING the new AI assistant we are piloting.
 
 Refunds
 -------
-Front-desk staff and the support assistant can issue refunds up to $100 without
-asking anyone. Anything above $100 needs sign-off from a shift manager before the
-money goes out. If a refund is above $500 it must go to Priya (Finance Director)
+Support staff and the assistant can issue refunds up to $100 without asking
+anyone. Anything above $100 needs sign-off from a shift manager before the money
+goes out. If a refund is above $500 it must go to Priya (Finance Director)
 personally — no exceptions, even for regulars.
 
 Refunds are only allowed within 30 days of the original purchase. After 30 days
 we offer store credit instead, same approval limits apply. We do NOT refund gift
 card purchases in cash, ever. Store credit only.
 
-If a customer paid in cash, refunds over $50 must be processed as a bank transfer,
-not from the till.
+If a customer paid in cash, refunds over $50 must be processed as a bank
+transfer, not from the till.
 
-Partial refunds for packages: if a customer has used any session from a package,
-refund the unused portion pro-rata minus the 15% booking fee. The assistant should
-never calculate this on its own for packages worth more than $300 — escalate to a
-human.
+Partial refunds for bundles (e.g. the 3-piece patio set): if a customer keeps
+part of a bundle, refund the returned items pro-rata minus the 15% restocking
+fee. The assistant should never calculate this on its own for bundles worth more
+than $300 — escalate to a human.
 
 Payments & Discounts
 --------------------
 Nobody on the desk (human or otherwise) may apply a discount larger than 20% to
-any service. Seasonal promos come from marketing with a promo code — if there is
-no code in the system, there is no discount, I don't care what the customer says
+any item. Seasonal promos come from marketing with a promo code — if there is no
+code in the system, there is no discount, I don't care what the customer says
 Groupon told them.
 
 Price matching: we don't do it. Politely decline.
 
-Never split a single service payment across more than two cards. It breaks the
-POS reconciliation and Devi will hunt you down.
+Never split a single purchase across more than two cards. It breaks the POS
+reconciliation and Devi will hunt you down.
 
 Any refund issued to a card different from the original payment card needs
 manager approval regardless of the amount.

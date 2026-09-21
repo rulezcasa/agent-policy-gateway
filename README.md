@@ -1,7 +1,7 @@
 # Agent Policy Gateway
 
 Private agent governance gateway for SMEs. AI agents are given tool access (refunds,
-bookings, messaging, CRM), but nothing stops them from doing things the company's
+orders, messaging, CRM), but nothing stops them from doing things the company's
 policies forbid. This gateway sits between agents and their tools, intercepts every
 tool call, validates it against the company's own policies, and either allows it,
 blocks it, or holds it for human approval.
@@ -14,7 +14,7 @@ Agent  →  MCP Policy Gateway  →  MCP Tool Server  →  Business System
 
 ## Documentation
 
-- [AGENT_USECASE.md](AGENT_USECASE.md) — the demo company (Lumina Wellness),
+- [AGENT_USECASE.md](AGENT_USECASE.md) — the demo company (Maplewood Home & Living),
   its policies, and the demo agents we'll build for the live demo
 - [DATA_MODELS.md](DATA_MODELS.md) — data storage, collections, and every
   field of the canonical formats explained
@@ -77,7 +77,7 @@ agent-policy-gateway/
 **Phase 1 — one-time setup (company admin)**
 1. Admin uploads the company's unstructured policy docs (PDFs) at `/policies/upload`.
 2. Backend extracts text, and an LLM splits it into individual rules, classifies each
-   into a category (payments, customer_data, scheduling, pricing, communication,
+   into a category (payments, customer_data, orders, pricing, communication,
    access_permissions), and converts it into the canonical structured format.
 3. Admin reviews each extracted rule at `/policies/review` — original policy text
    side-by-side with the structured version — and confirms, edits, or rejects it.
