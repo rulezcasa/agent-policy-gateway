@@ -1,0 +1,22 @@
+[
+  {
+    "name": "refund_authorization",
+    "description": "Rules governing who must approve refunds based on amount thresholds (e.g., <$100 agent, <$500 manager, >$500 director)."
+  },
+  {
+    "name": "refund_restrictions",
+    "description": "Specific conditions where refunds are prohibited or limited, such as gift card purchases requiring store credit only."
+  },
+  {
+    "name": "discount_limits",
+    "description": "Caps on the percentage or value of discounts an agent can apply to any order (e.g., max 20%)."
+  },
+  {
+    "name": "order_modification",
+    "description": "Procedures for changing order details, including cancellations, returns, and shipping address updates."
+  },
+  {
+    "name": "customer_data_privacy",
+    "description": "Protocols for accessing, viewing, or exporting sensitive customer information and records."
+  }
+]

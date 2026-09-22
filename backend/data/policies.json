@@ -1,0 +1,323 @@
+[
+  {
+    "policy_id": "refund_amount_threshold_standard_approval_a25ae8",
+    "name": "Refund Amount Threshold (Standard Approval)",
+    "category": "refund_authorization",
+    "subject": {
+      "roles": [
+        "agent",
+        "human_agent"
+      ]
+    },
+    "action": "issue_refund",
+    "conditions": [
+      {
+        "field": "amount",
+        "operator": ">",
+        "value": 100,
+        "unit": "USD"
+      },
+      {
+        "field": "amount",
+        "operator": "<=",
+        "value": 500,
+        "unit": "USD"
+      }
+    ],
+    "decision": "requires_approval",
+    "approval_role": "shift_manager",
+    "priority": 2,
+    "version": 1,
+    "status": "pending_review",
+    "source_doc": "doc_e4f35c88",
+    "original_text": "Anything above $100 needs sign-off from a shift manager before the money goes out.",
+    "needs_review": false
+  },
+  {
+    "policy_id": "refund_amount_threshold_high_value_approval_7ade68",
+    "name": "Refund Amount Threshold (High Value Approval)",
+    "category": "refund_authorization",
+    "subject": {
+      "roles": [
+        "agent",
+        "human_agent"
+      ]
+    },
+    "action": "issue_refund",
+    "conditions": [
+      {
+        "field": "amount",
+        "operator": ">",
+        "value": 500,
+        "unit": "USD"
+      }
+    ],
+    "decision": "requires_approval",
+    "approval_role": "Priya (Finance Director)",
+    "priority": 3,
+    "version": 1,
+    "status": "pending_review",
+    "source_doc": "doc_e4f35c88",
+    "original_text": "If a refund is above $500 it must go to Priya (Finance Director) personally -- no exceptions, even for regulars.",
+    "needs_review": false
+  },
+  {
+    "policy_id": "refund_method_restriction_gift_cards_e07c87",
+    "name": "Refund Method Restriction (Gift Cards)",
+    "category": "refund_restrictions",
+    "subject": {
+      "roles": [
+        "agent",
+        "human_agent"
+      ]
+    },
+    "action": "issue_refund",
+    "conditions": [
+      {
+        "field": "reason",
+        "operator": "in",
+        "value": [
+          "gift_card_purchase"
+        ]
+      }
+    ],
+    "decision": "block",
+    "approval_role": null,
+    "priority": 4,
+    "version": 1,
+    "status": "pending_review",
+    "source_doc": "doc_e4f35c88",
+    "original_text": "We do NOT refund gift card purchases in cash, ever. Store credit only.",
+    "needs_review": false
+  },
+  {
+    "policy_id": "discount_percentage_cap_e08629",
+    "name": "Discount Percentage Cap",
+    "category": "discount_limits",
+    "subject": {
+      "roles": [
+        "agent",
+        "human_agent"
+      ]
+    },
+    "action": "apply_discount",
+    "conditions": [
+      {
+        "field": "discount_percent",
+        "operator": ">",
+        "value": 20
+      }
+    ],
+    "decision": "block",
+    "approval_role": null,
+    "priority": 1,
+    "version": 1,
+    "status": "pending_review",
+    "source_doc": "doc_e4f35c88",
+    "original_text": "Nobody on the desk (human or otherwise) may apply a discount larger than 20% to any item.",
+    "needs_review": false
+  },
+  {
+    "policy_id": "single_customer_lookup_constraint_11e83e",
+    "name": "Single Customer Lookup Constraint",
+    "category": "customer_data_privacy",
+    "subject": {
+      "roles": [
+        "assistant"
+      ]
+    },
+    "action": "get_customer_record",
+    "conditions": [
+      {
+        "field": "phone",
+        "operator": "in",
+        "value": [
+          "string"
+        ]
+      }
+    ],
+    "decision": "allow",
+    "approval_role": null,
+    "priority": 10,
+    "version": 1,
+    "status": "pending_review",
+    "source_doc": "doc_57d954b6",
+    "original_text": "Look up one customer at a time.",
+    "needs_review": false
+  },
+  {
+    "policy_id": "credit_application_access_restriction_6275bc",
+    "name": "Credit Application Access Restriction",
+    "category": "customer_data_privacy",
+    "subject": {
+      "roles": [
+        "assistant"
+      ]
+    },
+    "action": "get_credit_application",
+    "conditions": [
+      {
+        "field": "customer_id",
+        "operator": "in",
+        "value": [
+          "string"
+        ]
+      }
+    ],
+    "decision": "block",
+    "approval_role": null,
+    "priority": 100,
+    "version": 1,
+    "status": "pending_review",
+    "source_doc": "doc_57d954b6",
+    "original_text": "Credit account applications may only be opened by the finance team. The assistant must never read, summarise, or forward anything from a credit application under any circumstances.",
+    "needs_review": false
+  },
+  {
+    "policy_id": "customer_list_export_prohibition_da77b8",
+    "name": "Customer List Export Prohibition",
+    "category": "customer_data_privacy",
+    "subject": {
+      "roles": [
+        "assistant"
+      ]
+    },
+    "action": "export_customer_list",
+    "conditions": [
+      {
+        "field": "destination",
+        "operator": "in",
+        "value": [
+          "string"
+        ]
+      },
+      {
+        "field": "reason",
+        "operator": "in",
+        "value": [
+          "string"
+        ]
+      }
+    ],
+    "decision": "block",
+    "approval_role": null,
+    "priority": 100,
+    "version": 1,
+    "status": "pending_review",
+    "source_doc": "doc_57d954b6",
+    "original_text": "Customer lists must never be exported, emailed, or pasted into any external tool. This includes \"just this once\" requests from marketing or a partner campaign.",
+    "needs_review": false
+  },
+  {
+    "policy_id": "cancel_order_before_dispatch_4421c8",
+    "name": "Cancel Order Before Dispatch",
+    "category": "order_modification",
+    "subject": {
+      "roles": [
+        "agent"
+      ]
+    },
+    "action": "cancel_order",
+    "conditions": [
+      {
+        "field": "order_id",
+        "operator": "in",
+        "value": [
+          "active"
+        ]
+      }
+    ],
+    "decision": "allow",
+    "approval_role": null,
+    "priority": 100,
+    "version": 1,
+    "status": "pending_review",
+    "source_doc": "doc_887ccdc4",
+    "original_text": "Orders can be edited or cancelled free of charge any time before they are handed to the courier.",
+    "needs_review": false
+  },
+  {
+    "policy_id": "cancel_order_after_dispatch_2501bd",
+    "name": "Cancel Order After Dispatch",
+    "category": "order_modification",
+    "subject": {
+      "roles": [
+        "agent"
+      ]
+    },
+    "action": "cancel_order",
+    "conditions": [
+      {
+        "field": "order_id",
+        "operator": "in",
+        "value": [
+          "dispatched"
+        ]
+      }
+    ],
+    "decision": "block",
+    "approval_role": null,
+    "priority": 100,
+    "version": 1,
+    "status": "pending_review",
+    "source_doc": "doc_887ccdc4",
+    "original_text": "Once an order shows \"dispatched\" in the system, no changes -- the customer has to receive it and start a normal return instead.",
+    "needs_review": false
+  },
+  {
+    "policy_id": "update_shipping_address_before_dispatch_abd15d",
+    "name": "Update Shipping Address Before Dispatch",
+    "category": "order_modification",
+    "subject": {
+      "roles": [
+        "agent"
+      ]
+    },
+    "action": "update_shipping_address",
+    "conditions": [
+      {
+        "field": "order_id",
+        "operator": "in",
+        "value": [
+          "active"
+        ]
+      }
+    ],
+    "decision": "allow",
+    "approval_role": null,
+    "priority": 100,
+    "version": 1,
+    "status": "pending_review",
+    "source_doc": "doc_887ccdc4",
+    "original_text": "Shipping address changes are fine before dispatch.",
+    "needs_review": false
+  },
+  {
+    "policy_id": "update_shipping_address_after_dispatch_d88821",
+    "name": "Update Shipping Address After Dispatch",
+    "category": "order_modification",
+    "subject": {
+      "roles": [
+        "agent"
+      ]
+    },
+    "action": "update_shipping_address",
+    "conditions": [
+      {
+        "field": "order_id",
+        "operator": "in",
+        "value": [
+          "dispatched"
+        ]
+      }
+    ],
+    "decision": "block",
+    "approval_role": null,
+    "priority": 100,
+    "version": 1,
+    "status": "pending_review",
+    "source_doc": "doc_887ccdc4",
+    "original_text": "After dispatch we cannot reroute, so don\u2019t promise the customer we can.",
+    "needs_review": false
+  }
+]
