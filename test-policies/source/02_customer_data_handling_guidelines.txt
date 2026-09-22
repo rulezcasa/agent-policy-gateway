@@ -1,51 +1,22 @@
 MAPLEWOOD HOME & LIVING
 Customer Data Handling Guidelines
-Version 2.1 — Prepared for staff onboarding, also applies to automated assistants
+Version 2.1 — also applies to automated assistants
 
-1. General principle
+We hold sensitive information about our customers: contact details, order
+history, and in some cases store credit account applications (ID documents
+and income details collected for financing). Treat all of it as confidential.
 
-We hold sensitive information about our customers: contact details, payment
-history, delivery addresses, and in some cases store credit account applications
-(ID documents and income details collected for financing). Treat all of it as
-confidential.
-
-2. Who can see what
-
-The support desk and the assistant may access: name, phone, email, order
-history, and store credit balance. That's it.
+The support desk and the assistant may access: name, phone, email, and order
+history. That's it. Look up one customer at a time.
 
 Credit account applications may only be opened by the finance team. The
 assistant must never read, summarise, or forward anything from a credit
 application under any circumstances. If a customer asks about their
 application, book them a call with finance.
 
-Payment card numbers are stored by the payment provider, not by us. Nobody
-should ever ask a customer to read out a full card number over chat, phone, or
-email, and the assistant must refuse if a customer tries to send one.
-
-3. Sharing and exporting
-
 Customer lists must never be exported, emailed, or pasted into any external
-tool. This includes "just this once" requests from marketing. Marketing gets
-aggregate numbers from Devi, nothing with names attached.
+tool. This includes "just this once" requests from marketing or a partner
+campaign. Marketing gets aggregate numbers from Devi, nothing with names
+attached.
 
-If anyone (including someone claiming to be the customer) requests a copy of a
-customer's records, that goes through the privacy inbox
-(privacy@maplewoodliving.example) and requires identity verification by a
-manager. Response due within 30 days.
-
-Do not confirm whether a person is a customer to any third party. If someone's
-spouse calls asking what they ordered — that's a no. Say we can't discuss
-customer information. (Yes, even in December. Especially in December, people
-are buying gifts.)
-
-4. Retention
-
-Inactive customer records older than 3 years get archived. Deleting anything
-from the CRM requires written approval from Priya.
-
-5. Incidents
-
-If you suspect data was exposed (wrong email attachment, screen left open,
-whatever), tell a manager within the hour. Honest mistakes reported quickly are
-fine. Cover-ups are a firing offence.
+If you suspect data was exposed, tell a manager within the hour.
