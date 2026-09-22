@@ -1,4 +1,8 @@
-// Live feed of intercepted agent tool calls with decisions: allowed / blocked / requires_approval.
+import { ActionFeed } from "@/components/actions/action-feed";
+import { StatCard } from "@/components/ui/stat-card";
+import { mockActions, mockDecisions, mockPolicies } from "@/lib/mock-data";
+
 export default function ActionsPage() {
-  return <main className="p-8 text-xl font-semibold">Agent Actions (placeholder)</main>;
+  const count = (decision: "allow" | "block" | "requires_approval") => mockDecisions.filter((item) => item.decision === decision).length;
+  return <div className="space-y-8"><section><h2 className="text-2xl font-semibold tracking-tight text-slate-950">Agent actions</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Live administrative view of agent tool calls intercepted and evaluated by the MCP Policy Gateway. The gateway—not this interface—determines the final enforcement outcome.</p></section><section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><StatCard label="Intercepted actions" value={mockActions.length} detail="Canonical tool calls observed" icon={<span>◷</span>} /><StatCard label="Allowed" value={count("allow")} detail="Forwarded by the gateway" tone="indigo" icon={<span>✓</span>} /><StatCard label="Blocked" value={count("block")} detail="Violations prevented" tone="rose" icon={<span>×</span>} /><StatCard label="Approval required" value={count("requires_approval")} detail="Awaiting human decision" tone="amber" icon={<span>!</span>} /></section><section><div><h3 className="text-lg font-semibold text-slate-950">Intercepted action feed</h3><p className="mt-1 text-sm text-slate-500">Filter decisions or open an action to inspect its canonical context and policy evaluation.</p></div><div className="mt-5"><ActionFeed actions={mockActions} decisions={mockDecisions} policies={mockPolicies} /></div></section></div>;
 }
