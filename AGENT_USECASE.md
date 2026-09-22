@@ -43,11 +43,11 @@ One shipping rule, two tools. That's the whole order-agent surface.
 ## The demo agents
 
 All connect to the gateway via MCP (never directly to tools) and act under the
-`ai_agent` role. Shapes: [API.md](API.md).
+`ai_agent` role. Business API shapes: [API_CONTRACTS.md](API_CONTRACTS.md).
 
 ### `refund_agent`
 Refunds and billing.
-**Tools:** `issue_refund`, `apply_discount`, `get_order_status`, `get_customer_record` (by phone).
+**Tools:** `issue_refund`, `apply_discount`, `get_order_status`, `get_customer_record`.
 
 ### `support_agent`
 Customer records and data access.

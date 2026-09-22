@@ -14,7 +14,7 @@ Agent  →  MCP Policy Gateway  →  MCP Tool Server  →  Business System
 
 ## Documentation
 
-- [AGENT_USECASE_NEW.md](AGENT_USECASE_NEW.md) — the demo company (Maplewood Home & Living),
+- [AGENT_USECASE.md](AGENT_USECASE.md) — the demo company (Maplewood Home & Living),
   its policies, and the demo agents we'll build for the live demo
 - [API_CONTRACTS.md](API_CONTRACTS.md) — the business-system HTTP API contract
 - [DATA_MODELS.md](DATA_MODELS.md) — data storage, collections, and every
@@ -43,13 +43,14 @@ agent-policy-gateway/
 │           ├── api.ts             # thin fetch client for the backend
 │           └── mock-data.ts       # fake data for building UI before backend exists
 │
-├── backend/                   # business API + policy gateway + rule engine
+├── backend/                   # Maplewood business API (gateway comes later)
 │   └── app/
-│       ├── api/                   # HTTP routes: policies, actions, approvals
-│       ├── ingestion/             # PDF text extraction + LLM rule extraction
-│       ├── engine/                # policy retrieval + two-stage validation
-│       ├── gateway/               # MCP interception layer agents connect to
-│       └── models/                # DB models / persistence
+│       ├── main.py                # FastAPI app
+│       ├── api/                   # HTTP routes
+│       ├── services/              # refunds, discounts, cancels, lookups
+│       ├── db/                    # SQLite schema, seed data, queries
+│       ├── models/                # request/response shapes
+│       └── tools/                 # MCP tool server
 │
 ├── test-policies/             # sample unstructured policy PDFs for the demo company
 │   └── source/                # plain-text sources (edit + regenerate PDFs from these)
@@ -73,9 +74,9 @@ agent-policy-gateway/
 - MongoDB (or Postgres JSONB) for storing canonical policy documents —
   see [DATA_MODELS.md](DATA_MODELS.md) for the reasoning
 
-The current demo backend uses in-memory data. The business API remains policy-neutral;
-agents call `/gateway/check` first, and only the gateway returns `allow`, `block`, or
-`requires_approval` based on the active deterministic policies.
+The current demo backend is the policy-neutral business API. Customers, orders, and
+credit applications live in SQLite (`backend/maplewood.db`). The policy gateway is
+not wired yet.
 
 ## User flow
 

@@ -1,15 +1,13 @@
 from fastapi import FastAPI
 
-from .api.business import router as business_router
-from .gateway.gateway import router as gateway_router
+from .api.router import router as business_router
 
 app = FastAPI(
     title="Maplewood Home & Living Business API",
     version="1.0.0",
-    description="Demo business-system endpoints called behind the policy gateway.",
+    description="Demo business-system endpoints for Maplewood Home & Living.",
 )
 app.include_router(business_router)
-app.include_router(gateway_router)
 
 
 @app.get("/health", tags=["system"])

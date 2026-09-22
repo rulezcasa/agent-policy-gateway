@@ -1,12 +1,57 @@
+# OS
 .DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors / IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.*
+!.env.example
 
 # Python
 __pycache__/
 *.py[cod]
-.pytest_cache/
+*$py.class
+*.so
+.Python
 .venv/
 venv/
+env/
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+pip-wheel-metadata/
 
-# Local environment files
-.env
-.env.*
+# Test / type / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.hypothesis/
+coverage.xml
+
+# SQLite
+*.db
+*.db-wal
+*.db-shm
+
+# Logs
+*.log
+
+# Node / frontend (safety net; frontend/.gitignore also covers these)
+node_modules/
+.next/
+out/
+.turbo/

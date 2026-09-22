@@ -1,28 +1,38 @@
-# Backend - Agent Policy Gateway
+# Backend — Maplewood Business API
 
-Not built yet. Planned layout (FastAPI-style, subject to change):
+FastAPI service for Maplewood Home & Living. Endpoints follow
+[`../API_CONTRACTS.md`](../API_CONTRACTS.md). The API does not enforce policy;
+that layer will sit in front of these routes later.
+
+## Layout
 
 ```
 backend/
-	app/
-		api/        # HTTP routes: policy upload, policy CRUD, action feed, approvals
-		ingestion/  # PDF text extraction + LLM rule extraction -> canonical policy JSON
-		engine/     # Policy retrieval + two-stage validation (LLM reasoning + deterministic rule engine)
-		gateway/    # MCP interception layer - sits between agents and tool servers
-		models/     # DB models / persistence (MongoDB - see ../DATA_MODELS.md)
-	tests/
+  app/
+    main.py                 # FastAPI app + /health
+    api/
+      router.py             # HTTP endpoints
+    services/
+      service.py            # refunds, discounts, cancels, lookups
+    db/
+      schema.py             # tables + seed rows
+      queries.py            # SQLite reads/writes
+    models/
+      models.py             # request/response shapes
+    tools/                  # MCP tool server
+  tests/
+    test_business_api.py
+    conftest.py             # isolated temp SQLite database per test
 ```
 
-Decisions returned by the gateway: `allow` | `block` | `requires_approval`.
+Request flow:
 
-See `../DATA_MODELS.md` for collections and canonical formats, and
-`../AGENT_USECASE.md` for the demo company, policies, and agents.
+```
+HTTP → api/router.py → services/service.py → db/queries.py → maplewood.db
+```
 
-## Current implementation
-
-The FastAPI business API follows `../API_CONTRACTS.md`. The deterministic policy
-gateway follows `../AGENT_USECASE_NEW.md`. Business endpoints execute operations;
-agents should call `/gateway/check` first.
+Demo customers, orders, and credit applications are seeded on first run into
+`maplewood.db`. Override the path with `MAPLEWOOD_DB_PATH` if needed.
 
 ## Run
 
@@ -32,9 +42,7 @@ python -m pip install -r requirements.txt
 python -m app.main
 ```
 
-OpenAPI is available at `http://localhost:8000/docs`.
-No direct `uvicorn` command is required; the Python entrypoint starts the ASGI
-server internally.
+OpenAPI is at `http://localhost:8000/docs`.
 
 ## Test
 
@@ -42,19 +50,3 @@ server internally.
 cd backend
 python -m pytest -q
 ```
-
-The service uses in-memory demo data for the hackathon scenarios. Restarting the
-process resets the data.
-
-## Gateway endpoints
-
-- `POST /gateway/check` - evaluate an agent action.
-- `GET /gateway/actions` - list intercepted actions.
-- `GET /gateway/decisions` - list decisions.
-- `GET /gateway/policies` - list active demo policies.
-- `GET /gateway/approvals` - list unresolved approval requests.
-- `POST /gateway/approvals/{action_id}` - approve or reject a pending action.
-
-The gateway enforces the nine scenarios in `AGENT_USECASE_NEW.md`. It does not
-call the business API yet; it returns the decision and canonical action data for
-the MCP interception layer to use.
