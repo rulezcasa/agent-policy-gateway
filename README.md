@@ -14,8 +14,9 @@ Agent  →  MCP Policy Gateway  →  MCP Tool Server  →  Business System
 
 ## Documentation
 
-- [AGENT_USECASE.md](AGENT_USECASE.md) — the demo company (Maplewood Home & Living),
+- [AGENT_USECASE_NEW.md](AGENT_USECASE_NEW.md) — the demo company (Maplewood Home & Living),
   its policies, and the demo agents we'll build for the live demo
+- [API_CONTRACTS.md](API_CONTRACTS.md) — the business-system HTTP API contract
 - [DATA_MODELS.md](DATA_MODELS.md) — data storage, collections, and every
   field of the canonical formats explained
 
@@ -42,7 +43,7 @@ agent-policy-gateway/
 │           ├── api.ts             # thin fetch client for the backend
 │           └── mock-data.ts       # fake data for building UI before backend exists
 │
-├── backend/                   # gateway + ingestion + rule engine (not built yet)
+├── backend/                   # business API + policy gateway + rule engine
 │   └── app/
 │       ├── api/                   # HTTP routes: policies, actions, approvals
 │       ├── ingestion/             # PDF text extraction + LLM rule extraction
@@ -63,7 +64,7 @@ agent-policy-gateway/
 - Tailwind CSS, shadcn/ui planned for components
   pages read from `lib/mock-data.ts` until the backend is wired up
 
-**Backend (planned)**
+**Backend**
 - Python + FastAPI
 - LLM for policy extraction (ingestion) and action reasoning (explainability) —
   runs locally/privately, which is part of the pitch
@@ -71,6 +72,10 @@ agent-policy-gateway/
 - MCP-compatible gateway surface so any agent framework can plug in
 - MongoDB (or Postgres JSONB) for storing canonical policy documents —
   see [DATA_MODELS.md](DATA_MODELS.md) for the reasoning
+
+The current demo backend uses in-memory data. The business API remains policy-neutral;
+agents call `/gateway/check` first, and only the gateway returns `allow`, `block`, or
+`requires_approval` based on the active deterministic policies.
 
 ## User flow
 
@@ -103,3 +108,14 @@ agent-policy-gateway/
 ```bash
 cd frontend && npm run dev
 ```
+
+## Run the backend
+
+```bash
+cd backend
+python -m app.main
+```
+
+This uses the active Python environment and starts the FastAPI server at
+`http://127.0.0.1:8000`.
+
