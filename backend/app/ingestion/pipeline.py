@@ -129,6 +129,24 @@ def _append_json(path: Path, records: list[dict]) -> None:
     path.write_text(json.dumps(existing, indent=2))
 
 
+def update_policy(policy_id: str, updates: dict) -> dict:
+    """Applies a reviewer's decision (confirm/edit/reject) to one policy.
+
+    `updates` may set "status" (pending_review -> active or draft) and/or
+    edit any structured field. Editing anything other than status bumps
+    "version", per DATA_MODELS.md.
+    """
+    policies = json.loads(POLICIES_PATH.read_text()) if POLICIES_PATH.exists() else []
+    for policy in policies:
+        if policy["policy_id"] == policy_id:
+            if any(field != "status" for field in updates):
+                policy["version"] += 1
+            policy.update(updates)
+            POLICIES_PATH.write_text(json.dumps(policies, indent=2))
+            return policy
+    raise KeyError(f"Unknown policy_id: {policy_id}")
+
+
 async def process_documents(file_paths: list[Path]) -> list[dict]:
     """Entrypoint: PDFs in, validated policy rule dicts out (also appended
     to documents.json / policies.json). This is the function an upload
