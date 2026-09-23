@@ -1,3 +1,3 @@
-from app.tools.server import main
+from .mcp_server import main
 
 main()

@@ -14,8 +14,11 @@ from ..models.models import (
     ExportRequest,
     ExportResponse,
     Order,
+    OrderListResponse,
     RefundRequest,
     RefundResponse,
+    ReturnRequest,
+    ReturnResponse,
     ShippingAddressRequest,
 )
 
@@ -43,6 +46,11 @@ def get_customer(phone: str = Query(min_length=1)) -> CustomerLookupResponse:
 @router.get("/orders/{order_id}", response_model=Order)
 def get_order(order_id: str) -> Order:
     return _call(services.get_order, order_id)
+
+
+@router.get("/customers/{customer_id}/orders", response_model=OrderListResponse)
+def get_orders(customer_id: str) -> OrderListResponse:
+    return _call(services.get_orders, customer_id)
 
 
 @router.post("/orders/{order_id}/refunds", response_model=RefundResponse)
@@ -73,3 +81,48 @@ def update_shipping_address(order_id: str, request: ShippingAddressRequest) -> O
 @router.post("/orders/{order_id}/cancel", response_model=CancelResponse)
 def cancel_order(order_id: str, request: CancelRequest) -> CancelResponse:
     return _call(services.cancel_order, order_id, request)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@router.post("/orders/{order_id}/return", response_model=ReturnResponse)
+def return_order(order_id: str, request: ReturnRequest) -> ReturnResponse:
+    return _call(services.return_order, order_id, request)

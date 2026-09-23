@@ -75,6 +75,27 @@ def get_order(order_id: str | None) -> Order | None:
         return _order_from_id(conn, order_id)
 
 
+def list_orders_for_customer(customer_id: str) -> list[Order] | None:
+    with connect() as conn:
+        exists = conn.execute(
+            "SELECT 1 FROM customers WHERE customer_id = ?",
+            (customer_id,),
+        ).fetchone()
+        if exists is None:
+            return None
+        rows = conn.execute(
+            """
+            SELECT order_id, customer_id, product, amount, currency, payment_method,
+                   fulfillment_status, ordered_on, street, city, state, postal_code, country
+            FROM orders
+            WHERE customer_id = ?
+            ORDER BY order_id
+            """,
+            (customer_id,),
+        ).fetchall()
+        return [_order_from_row(row) for row in rows]
+
+
 def get_credit_application(customer_id: str) -> CreditApplication | None:
     with connect() as conn:
         row = conn.execute(
@@ -142,8 +163,11 @@ def update_order_fulfillment_status(order_id: str, fulfillment_status: str) -> O
 
 def _init(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
+    _ensure_ordered_on(conn)
     if conn.execute("SELECT COUNT(*) AS n FROM customers").fetchone()["n"] == 0:
         _seed(conn)
+    else:
+        _backfill_seed_orders(conn)
 
 
 def _seed(conn: sqlite3.Connection) -> None:
@@ -155,8 +179,8 @@ def _seed(conn: sqlite3.Connection) -> None:
         """
         INSERT INTO orders (
             order_id, customer_id, product, amount, currency, payment_method,
-            fulfillment_status, street, city, state, postal_code, country
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            fulfillment_status, ordered_on, street, city, state, postal_code, country
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         SEED_ORDERS,
     )
@@ -169,6 +193,37 @@ def _seed(conn: sqlite3.Connection) -> None:
         """,
         SEED_CREDIT_APPLICATIONS,
     )
+
+
+def _ensure_ordered_on(conn: sqlite3.Connection) -> None:
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(orders)")}
+    if "ordered_on" not in columns:
+        conn.execute("ALTER TABLE orders ADD COLUMN ordered_on TEXT")
+
+
+def _backfill_seed_orders(conn: sqlite3.Connection) -> None:
+    for order in SEED_ORDERS:
+        order_id = order[0]
+        ordered_on = order[7]
+        row = conn.execute(
+            "SELECT ordered_on FROM orders WHERE order_id = ?",
+            (order_id,),
+        ).fetchone()
+        if row is None:
+            conn.execute(
+                """
+                INSERT INTO orders (
+                    order_id, customer_id, product, amount, currency, payment_method,
+                    fulfillment_status, ordered_on, street, city, state, postal_code, country
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                order,
+            )
+        elif not row["ordered_on"]:
+            conn.execute(
+                "UPDATE orders SET ordered_on = ? WHERE order_id = ?",
+                (ordered_on, order_id),
+            )
 
 
 def _customer_from_row(conn: sqlite3.Connection, row: sqlite3.Row) -> Customer:
@@ -192,7 +247,7 @@ def _order_from_id(conn: sqlite3.Connection, order_id: str) -> Order | None:
     row = conn.execute(
         """
         SELECT order_id, customer_id, product, amount, currency, payment_method,
-               fulfillment_status, street, city, state, postal_code, country
+               fulfillment_status, ordered_on, street, city, state, postal_code, country
         FROM orders
         WHERE order_id = ?
         """,
@@ -200,6 +255,10 @@ def _order_from_id(conn: sqlite3.Connection, order_id: str) -> Order | None:
     ).fetchone()
     if row is None:
         return None
+    return _order_from_row(row)
+
+
+def _order_from_row(row: sqlite3.Row) -> Order:
     return Order(
         order_id=row["order_id"],
         customer_id=row["customer_id"],
@@ -208,6 +267,7 @@ def _order_from_id(conn: sqlite3.Connection, order_id: str) -> Order | None:
         currency=row["currency"],
         payment_method=row["payment_method"],
         fulfillment_status=row["fulfillment_status"],
+        ordered_on=row["ordered_on"],
         shipping_address=ShippingAddress(
             street=row["street"],
             city=row["city"],

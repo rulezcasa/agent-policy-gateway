@@ -3,7 +3,8 @@
 HTTP APIs for Maplewood Home & Living. These are the **business system** — they
 do not enforce company policy. JSON in and out. No auth for the demo.
 
-Eight endpoints. One per action in [AGENT_USECASE.md](AGENT_USECASE.md).
+Ten endpoints. One per action in [AGENT_USECASE.md](AGENT_USECASE.md), plus a
+customer order list.
 
 ---
 
@@ -27,7 +28,49 @@ for later calls, plus name, email, and order history.
   "name": "Elena Vasquez",
   "phone": "555-0198",
   "email": "elena.vasquez@example.com",
-  "order_ids": ["ORD-1488"]
+  "order_ids": ["ORD-1488", "ORD-1602"]
+}
+```
+
+---
+
+### `GET /customers/{customer_id}/orders`
+
+Every order for one customer, in `order_id` order. Unknown `customer_id` is 404.
+A known customer with no orders returns an empty `orders` array.
+
+**Input**
+
+```json
+{ "customer_id": "cust_201" }
+```
+
+**Output**
+
+```json
+{
+  "ok": true,
+  "customer_id": "cust_201",
+  "orders": [
+    {
+      "ok": true,
+      "order_id": "ORD-1488",
+      "customer_id": "cust_201",
+      "product": "Table lamp",
+      "amount": 80,
+      "currency": "USD",
+      "payment_method": "card",
+      "fulfillment_status": "processing",
+      "ordered_on": "2026-09-20",
+      "shipping_address": {
+        "street": "44 Cedar Ave",
+        "city": "Portland",
+        "state": "OR",
+        "postal_code": "97205",
+        "country": "US"
+      }
+    }
+  ]
 }
 ```
 
@@ -35,10 +78,11 @@ for later calls, plus name, email, and order history.
 
 ### `GET /orders/{order_id}`
 
-Order details: product, amount, payment method, fulfillment status, shipping address.
+Order details: product, amount, payment method, fulfillment status, order date, shipping address.
 
 `payment_method` is `card` | `cash` | `gift_card`.
-`fulfillment_status` is `processing` | `dispatched` | `delivered` | `cancelled`.
+`fulfillment_status` is `processing` | `dispatched` | `delivered` | `cancelled` | `returned`.
+`ordered_on` is the date the order was placed, `YYYY-MM-DD`. A return is allowed only while this date is within the last 10 days.
 
 **Input**
 
@@ -58,6 +102,7 @@ Order details: product, amount, payment method, fulfillment status, shipping add
   "currency": "USD",
   "payment_method": "card",
   "fulfillment_status": "processing",
+  "ordered_on": "2026-09-21",
   "shipping_address": {
     "street": "12 Pine Rd",
     "city": "Portland",
@@ -216,6 +261,7 @@ Replace the shipping address. `country` defaults to `US`.
   "currency": "USD",
   "payment_method": "card",
   "fulfillment_status": "processing",
+  "ordered_on": "2026-09-21",
   "shipping_address": {
     "street": "88 Harbor St",
     "city": "Portland",
@@ -249,5 +295,38 @@ Cancel an order.
   "order_id": "ORD-1690",
   "fulfillment_status": "cancelled",
   "reason": "customer changed mind"
+}
+```
+
+---
+
+### `POST /orders/{order_id}/return`
+
+Return a delivered order and refund its full amount. The amount is taken from the order, not from the request. Sets `fulfillment_status` to `returned`.
+
+The order must already be `delivered`, and `ordered_on` must be within the last 10 days. Otherwise the call is `400`. An order that is still `processing` or `dispatched`, or that was placed more than 10 days ago, is not returned.
+
+**Input**
+
+```json
+{
+  "order_id": "ORD-1602",
+  "reason": "returned linen throw"
+}
+```
+
+**Output**
+
+```json
+{
+  "ok": true,
+  "order_id": "ORD-1602",
+  "customer_id": "cust_201",
+  "fulfillment_status": "returned",
+  "amount": 45,
+  "currency": "USD",
+  "payment_method": "card",
+  "refund_id": "ref_1602",
+  "reason": "returned linen throw"
 }
 ```

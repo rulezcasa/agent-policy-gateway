@@ -1,3 +1,10 @@
+from datetime import date, timedelta
+
+
+def _days_ago(days: int) -> str:
+    return (date.today() - timedelta(days=days)).isoformat()
+
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS customers (
     customer_id TEXT PRIMARY KEY,
@@ -14,6 +21,7 @@ CREATE TABLE IF NOT EXISTS orders (
     currency TEXT NOT NULL DEFAULT 'USD',
     payment_method TEXT NOT NULL,
     fulfillment_status TEXT NOT NULL,
+    ordered_on TEXT NOT NULL,
     street TEXT NOT NULL,
     city TEXT NOT NULL,
     state TEXT NOT NULL,
@@ -49,6 +57,7 @@ SEED_ORDERS = (
         "USD",
         "card",
         "processing",
+        _days_ago(2),
         "44 Cedar Ave",
         "Portland",
         "OR",
@@ -63,6 +72,7 @@ SEED_ORDERS = (
         "USD",
         "card",
         "processing",
+        _days_ago(4),
         "7 Oak St",
         "Portland",
         "OR",
@@ -77,6 +87,7 @@ SEED_ORDERS = (
         "USD",
         "card",
         "processing",
+        _days_ago(1),
         "12 Pine Rd",
         "Portland",
         "OR",
@@ -91,10 +102,41 @@ SEED_ORDERS = (
         "USD",
         "card",
         "dispatched",
+        _days_ago(6),
         "91 River Dr",
         "Portland",
         "OR",
         "97211",
+        "US",
+    ),
+    (
+        "ORD-1602",
+        "cust_201",
+        "Linen throw",
+        45,
+        "USD",
+        "card",
+        "delivered",
+        _days_ago(12),
+        "44 Cedar Ave",
+        "Portland",
+        "OR",
+        "97205",
+        "US",
+    ),
+    (
+        "ORD-1618",
+        "cust_118",
+        "Ceramic vase",
+        55,
+        "USD",
+        "card",
+        "delivered",
+        _days_ago(20),
+        "12 Pine Rd",
+        "Portland",
+        "OR",
+        "97202",
         "US",
     ),
 )

@@ -16,7 +16,7 @@ Agent  →  MCP Policy Gateway  →  MCP Tool Server  →  Business System
 
 - [AGENT_USECASE.md](AGENT_USECASE.md) — the demo company (Maplewood Home & Living),
   its policies, and the demo agents we'll build for the live demo
-- [API_CONTRACTS.md](API_CONTRACTS.md) — the business-system HTTP API contract
+- [API.md](API.md) — the business-system HTTP API contract
 - [DATA_MODELS.md](DATA_MODELS.md) — data storage, collections, and every
   field of the canonical formats explained
 
@@ -44,17 +44,28 @@ agent-policy-gateway/
 │           └── mock-data.ts       # fake data for building UI before backend exists
 │
 ├── backend/                   # Maplewood business API (gateway comes later)
-│   └── app/
-│       ├── main.py                # FastAPI app
-│       ├── api/                   # HTTP routes
-│       ├── services/              # refunds, discounts, cancels, lookups
-│       ├── db/                    # SQLite schema, seed data, queries
-│       ├── models/                # request/response shapes
-│       └── tools/                 # MCP tool server
+│   ├── app/
+│   │   ├── main.py                # FastAPI app + /health
+│   │   ├── api/
+│   │   │   └── router.py          # HTTP endpoints under /api
+│   │   ├── services/
+│   │   │   └── service.py         # refunds, discounts, cancels, lookups
+│   │   ├── db/
+│   │   │   ├── schema.py          # tables + seed rows
+│   │   │   └── queries.py         # SQLite reads/writes
+│   │   ├── models/
+│   │   │   └── models.py          # request/response shapes
+│   │   └── tools/
+│   │       ├── mcp_server.py      # MCP tools (1:1 with HTTP actions)
+│   │       └── __main__.py        # python -m app.tools
+│   ├── tests/                     # isolated temp SQLite database per test
+│   ├── maplewood.db               # created on first run (gitignored)
+│   └── requirements.txt
 │
 ├── test-policies/             # sample unstructured policy PDFs for the demo company
 │   └── source/                # plain-text sources (edit + regenerate PDFs from these)
 ├── AGENT_USECASE.md           # demo company, policies, agents, live demo script
+├── API.md                     # business-system HTTP API contract
 └── DATA_MODELS.md             # storage, collections, canonical formats field-by-field
 ```
 
@@ -74,9 +85,30 @@ agent-policy-gateway/
 - MongoDB (or Postgres JSONB) for storing canonical policy documents —
   see [DATA_MODELS.md](DATA_MODELS.md) for the reasoning
 
-The current demo backend is the policy-neutral business API. Customers, orders, and
-credit applications live in SQLite (`backend/maplewood.db`). The policy gateway is
-not wired yet.
+The current demo backend is the policy-neutral business API. HTTP shapes are in
+[API.md](API.md). Customers, orders, and credit applications are seeded on first
+run into SQLite (`backend/maplewood.db`). Override the path with `MAPLEWOOD_DB_PATH`
+if needed. The policy gateway is not wired yet.
+
+HTTP and MCP both call the same service layer and write to the same database:
+
+```
+HTTP → app/api/router.py       ─┐
+MCP  → app/tools/mcp_server.py ─┴→ app/services/service.py → app/db/queries.py → maplewood.db
+```
+
+| HTTP | MCP tool |
+|---|---|
+| `GET /api/customers?phone=` | `get_customer_record` |
+| `GET /api/customers/{id}/orders` | `get_orders` |
+| `GET /api/orders/{order_id}` | `get_order_status` |
+| `POST /api/orders/{order_id}/refunds` | `issue_refund` |
+| `POST /api/orders/{order_id}/discounts` | `apply_discount` |
+| `GET /api/customers/{id}/credit-application` | `get_credit_application` |
+| `POST /api/customers/export` | `export_customer_list` |
+| `PUT /api/orders/{order_id}/shipping-address` | `update_shipping_address` |
+| `POST /api/orders/{order_id}/cancel` | `cancel_order` |
+| `POST /api/orders/{order_id}/return` | `return_order` |
 
 ## User flow
 
@@ -114,9 +146,30 @@ cd frontend && npm run dev
 
 ```bash
 cd backend
+python -m pip install -r requirements.txt
 python -m app.main
 ```
 
-This uses the active Python environment and starts the FastAPI server at
-`http://127.0.0.1:8000`.
+HTTP API is at `http://localhost:8000/api`. OpenAPI is at `http://localhost:8000/docs`.
+
+| Env | Default | Used by |
+|---|---|---|
+| `HOST` | `0.0.0.0` | HTTP API |
+| `PORT` | `8000` | HTTP API |
+| `MAPLEWOOD_DB_PATH` | `backend/maplewood.db` | HTTP API and MCP |
+
+The MCP tool server is a separate process on port 8001 (`/mcp`). It exposes the
+same eight actions and writes to the same SQLite database:
+
+```bash
+cd backend
+python -m app.tools
+```
+
+## Test the backend
+
+```bash
+cd backend
+python -m pytest -q
+```
 

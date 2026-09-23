@@ -1,10 +1,11 @@
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
 PaymentMethod = Literal["card", "cash", "gift_card"]
-FulfillmentStatus = Literal["processing", "dispatched", "delivered", "cancelled"]
+FulfillmentStatus = Literal["processing", "dispatched", "delivered", "cancelled", "returned"]
 
 
 class ApiResponse(BaseModel):
@@ -39,7 +40,13 @@ class Order(ApiResponse):
     currency: str = "USD"
     payment_method: PaymentMethod
     fulfillment_status: FulfillmentStatus
+    ordered_on: date
     shipping_address: ShippingAddress
+
+
+class OrderListResponse(ApiResponse):
+    customer_id: str
+    orders: list[Order]
 
 
 class RefundRequest(BaseModel):
@@ -113,6 +120,22 @@ class CancelRequest(BaseModel):
 class CancelResponse(ApiResponse):
     order_id: str
     fulfillment_status: Literal["cancelled"]
+    reason: str
+
+
+class ReturnRequest(BaseModel):
+    order_id: str
+    reason: str = Field(min_length=1)
+
+
+class ReturnResponse(ApiResponse):
+    order_id: str
+    customer_id: str
+    fulfillment_status: Literal["returned"]
+    amount: float
+    currency: str
+    payment_method: PaymentMethod
+    refund_id: str
     reason: str
 
 

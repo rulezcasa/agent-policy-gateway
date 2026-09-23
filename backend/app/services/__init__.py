@@ -7,7 +7,9 @@ from .service import (
     get_credit_application,
     get_customer,
     get_order,
+    get_orders,
     issue_refund,
+    return_order,
     update_shipping_address,
 )
 
@@ -20,6 +22,8 @@ __all__ = [
     "get_credit_application",
     "get_customer",
     "get_order",
+    "get_orders",
     "issue_refund",
+    "return_order",
     "update_shipping_address",
 ]
