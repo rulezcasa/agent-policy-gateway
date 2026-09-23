@@ -14,8 +14,11 @@ const statusStyles: Record<Policy["status"], string> = {
 
 const statusLabels: Record<Policy["status"], string> = { active: "Active", draft: "Draft", pending_review: "Awaiting review" };
 
-export function PolicyCategoryBadge({ category }: { category: PolicyCategory }) {
-  return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold tracking-[-0.01em] ring-1 ring-inset ring-black/[0.035] ${categoryStyles[category]}`}>{categoryLabels[category]}</span>;
+export function PolicyCategoryBadge({ category }: { category: PolicyCategory | string }) {
+  const knownCategory = category as PolicyCategory;
+  const label = categoryLabels[knownCategory] ?? category.replaceAll("_", " ");
+  const style = categoryStyles[knownCategory] ?? "bg-slate-100 text-slate-700";
+  return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize tracking-[-0.01em] ring-1 ring-inset ring-black/[0.035] ${style}`}>{label}</span>;
 }
 
 export function PolicyStatusBadge({ status }: { status: Policy["status"] }) {

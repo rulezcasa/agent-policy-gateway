@@ -14,7 +14,7 @@ export type PolicyCategory =
 export interface PolicyCondition {
   field: string;
   operator: string;
-  value: string | number;
+  value: string | number | Array<string | number>;
   unit?: string;
 }
 
@@ -33,6 +33,31 @@ export interface Policy {
   source_doc?: string; // original uploaded file
   original_text?: string; // the raw policy fragment this rule was extracted from
 }
+
+// Rules returned by the ingestion API use model-generated category labels,
+// rather than the curated categories used by the existing mock policy data.
+export interface IngestionPolicy {
+  policy_id: string;
+  name: string;
+  category: string;
+  subject: { roles: string[] };
+  action: string;
+  conditions: PolicyCondition[];
+  decision: Decision;
+  approval_role?: string | null;
+  version: number;
+  status: "active" | "draft" | "pending_review";
+  source_doc?: string;
+  original_text?: string;
+  needs_review?: boolean;
+}
+
+export type IngestionPolicyUpdate = Partial<
+  Pick<
+    IngestionPolicy,
+    "status" | "name" | "category" | "action" | "conditions" | "decision" | "approval_role"
+  >
+>;
 
 export interface AgentAction {
   action_id: string;
