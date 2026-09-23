@@ -1,9 +1,18 @@
+import json
 from collections.abc import Callable
-from typing import ParamSpec, TypeVar
+from typing import Literal, ParamSpec, TypeVar
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from pydantic import BaseModel
 
 from .. import services
+from ..ingestion.pipeline import (
+    DOCUMENTS_PATH,
+    POLICIES_PATH,
+    UPLOADS_DIR,
+    process_documents,
+    update_policy,
+)
 from ..models.models import (
     CancelRequest,
     CancelResponse,
@@ -81,6 +90,45 @@ def update_shipping_address(order_id: str, request: ShippingAddressRequest) -> O
 @router.post("/orders/{order_id}/cancel", response_model=CancelResponse)
 def cancel_order(order_id: str, request: CancelRequest) -> CancelResponse:
     return _call(services.cancel_order, order_id, request)
+
+
+@router.post("/policies/upload", tags=["ingestion"])
+async def upload_policies(files: list[UploadFile] = File(...)) -> list[dict]:
+    paths = []
+    for file in files:
+        path = UPLOADS_DIR / file.filename
+        path.write_bytes(await file.read())
+        paths.append(path)
+    return await process_documents(paths)
+
+
+@router.get("/ingestion/policies", tags=["ingestion"])
+def get_extracted_policies() -> list[dict]:
+    return json.loads(POLICIES_PATH.read_text()) if POLICIES_PATH.exists() else []
+
+
+@router.get("/ingestion/documents", tags=["ingestion"])
+def get_extracted_documents() -> list[dict]:
+    return json.loads(DOCUMENTS_PATH.read_text()) if DOCUMENTS_PATH.exists() else []
+
+
+class PolicyReviewUpdate(BaseModel):
+    status: Literal["active", "draft", "pending_review"] | None = None
+    name: str | None = None
+    category: str | None = None
+    action: str | None = None
+    conditions: list[dict] | None = None
+    decision: Literal["allow", "block", "requires_approval"] | None = None
+    approval_role: str | None = None
+    priority: int | None = None
+
+
+@router.patch("/ingestion/policies/{policy_id}", tags=["ingestion"])
+def review_extracted_policy(policy_id: str, update: PolicyReviewUpdate) -> dict:
+    try:
+        return update_policy(policy_id, update.model_dump(exclude_none=True))
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 
