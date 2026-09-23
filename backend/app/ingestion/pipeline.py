@@ -26,6 +26,11 @@ DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 DOCUMENTS_PATH = DATA_DIR / "documents.json"
 POLICIES_PATH = DATA_DIR / "policies.json"
 
+# Where an upload endpoint saves incoming files before processing them —
+# process_documents() only ever deals in paths that already exist on disk.
+UPLOADS_DIR = Path(__file__).resolve().parents[2] / "uploads"
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
 # Fields the gateway enriches onto an action's arguments at enforcement time
 # (see API_CONTRACTS.md) — valid condition targets even though they're not
 # arguments of the tool call itself.
