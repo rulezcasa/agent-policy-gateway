@@ -1,19 +1,21 @@
 import json
 from collections.abc import Callable
-from typing import Literal, ParamSpec, TypeVar
+from typing import ParamSpec, TypeVar
 
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
-from pydantic import BaseModel
 
 from .. import services
 from ..ingestion.pipeline import (
-    DOCUMENTS_PATH,
     POLICIES_PATH,
     UPLOADS_DIR,
+    list_documents,
     process_documents,
     update_policy,
 )
+from ..policy_engine.store import read_actions, read_pending
+from ..gateway.approvals import resolve_approval
 from ..models.models import (
+    ApprovalRequest,
     CancelRequest,
     CancelResponse,
     CreditApplication,
@@ -24,6 +26,7 @@ from ..models.models import (
     ExportResponse,
     Order,
     OrderListResponse,
+    PolicyReviewRequest,
     RefundRequest,
     RefundResponse,
     ReturnRequest,
@@ -92,6 +95,12 @@ def cancel_order(order_id: str, request: CancelRequest) -> CancelResponse:
     return _call(services.cancel_order, order_id, request)
 
 
+@router.post("/orders/{order_id}/return", response_model=ReturnResponse)
+def return_order(order_id: str, request: ReturnRequest) -> ReturnResponse:
+    return _call(services.return_order, order_id, request)
+
+
+
 @router.post("/policies/upload", tags=["ingestion"])
 async def upload_policies(files: list[UploadFile] = File(...)) -> list[dict]:
     paths = []
@@ -109,68 +118,34 @@ def get_extracted_policies() -> list[dict]:
 
 @router.get("/ingestion/documents", tags=["ingestion"])
 def get_extracted_documents() -> list[dict]:
-    return json.loads(DOCUMENTS_PATH.read_text()) if DOCUMENTS_PATH.exists() else []
+    return list_documents()
 
 
-class PolicyReviewUpdate(BaseModel):
-    status: Literal["active", "draft", "pending_review"] | None = None
-    name: str | None = None
-    category: str | None = None
-    action: str | None = None
-    conditions: list[dict] | None = None
-    decision: Literal["allow", "block", "requires_approval"] | None = None
-    approval_role: str | None = None
-    priority: int | None = None
+@router.get("/actions", tags=["gateway"])
+def list_actions() -> list[dict]:
+    return list(reversed(read_actions()))
+
+
+@router.get("/approvals", tags=["gateway"])
+def list_approvals() -> list[dict]:
+    return list(reversed(read_pending()))
+
+
+@router.post("/approvals/{action_id}", tags=["gateway"])
+async def decide_approval(action_id: str, request: ApprovalRequest) -> dict:
+    try:
+        return await resolve_approval(action_id, request.outcome, request.by)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.patch("/ingestion/policies/{policy_id}", tags=["ingestion"])
-def review_extracted_policy(policy_id: str, update: PolicyReviewUpdate) -> dict:
+def review_extracted_policy(policy_id: str, request: PolicyReviewRequest) -> dict:
     try:
-        return update_policy(policy_id, update.model_dump(exclude_none=True))
+        return update_policy(policy_id, request.model_dump(exclude_none=True))
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-@router.post("/orders/{order_id}/return", response_model=ReturnResponse)
-def return_order(order_id: str, request: ReturnRequest) -> ReturnResponse:
-    return _call(services.return_order, order_id, request)

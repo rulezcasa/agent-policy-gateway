@@ -1,10 +1,11 @@
-# Maplewood Business API
+# API Documentation
 
-HTTP APIs for Maplewood Home & Living. These are the **business system** — they
-do not enforce company policy. JSON in and out. No auth for the demo.
+HTTP APIs for Maplewood Home & Living. Every route below is mounted under `/api` (for example `GET /api/customers`).
 
-Ten endpoints. One per action in [AGENT_USECASE.md](AGENT_USECASE.md), plus a
-customer order list.
+Two groups:
+
+- **Business system** — CRUD operations on refunds, orders, customer data exposed via tools on an MCP server running on port 8001.
+- **Gateway and ingestion** — Policy upload and review, the intercepted-action feed, and approve/reject. Routes requests via proxy MCP gateway running on port 8002.
 
 ---
 
@@ -33,6 +34,8 @@ for later calls, plus name, email, and order history.
 ```
 
 ---
+
+
 
 ### `GET /customers/{customer_id}/orders`
 
@@ -76,6 +79,8 @@ A known customer with no orders returns an empty `orders` array.
 
 ---
 
+
+
 ### `GET /orders/{order_id}`
 
 Order details: product, amount, payment method, fulfillment status, order date, shipping address.
@@ -115,6 +120,8 @@ Order details: product, amount, payment method, fulfillment status, order date, 
 
 ---
 
+
+
 ### `POST /orders/{order_id}/refunds`
 
 Issue a refund. `payment_method` defaults to the order's if omitted.
@@ -149,6 +156,8 @@ Issue a refund. `payment_method` defaults to the order's if omitted.
 
 ---
 
+
+
 ### `POST /orders/{order_id}/discounts`
 
 Apply a percent discount. `amount` in the output is the new order total.
@@ -176,6 +185,8 @@ Apply a percent discount. `amount` in the output is the new order total.
 ```
 
 ---
+
+
 
 ### `GET /customers/{customer_id}/credit-application`
 
@@ -205,6 +216,8 @@ Fetch the customer's store-credit application (ID documents and income).
 
 ---
 
+
+
 ### `POST /customers/export`
 
 Export every customer record to an external destination.
@@ -231,6 +244,8 @@ Export every customer record to an external destination.
 ```
 
 ---
+
+
 
 ### `PUT /orders/{order_id}/shipping-address`
 
@@ -274,6 +289,8 @@ Replace the shipping address. `country` defaults to `US`.
 
 ---
 
+
+
 ### `POST /orders/{order_id}/cancel`
 
 Cancel an order.
@@ -299,6 +316,8 @@ Cancel an order.
 ```
 
 ---
+
+
 
 ### `POST /orders/{order_id}/return`
 
@@ -330,3 +349,77 @@ The order must already be `delivered`, and `ordered_on` must be within the last 
   "reason": "returned linen throw"
 }
 ```
+
+---
+
+
+
+## Gateway
+
+These routes read and resolve what the MCP gateway already decided. They do not re-run policy checks. `GET` responses are newest first.
+
+### `GET /actions`
+
+Every intercepted tool call, including allows. Shape: an action record in [DATA_MODELS.md](DATA_MODELS.md).
+
+### `GET /approvals`
+
+Block and hold records. Pending rows have `status: "pending_approval"`. Shape: a pending task in [DATA_MODELS.md](DATA_MODELS.md).
+
+### `POST /approvals/{action_id}`
+
+Approve or reject a held call. Approve forwards the saved `arguments` to the tool server once and sets `status` to `executed`. A second approve returns the same row and does not forward again. Reject sets `status` to `rejected` and does not forward. Unknown `action_id` is 404. A tool-server failure is 502 and the row stays `pending_approval`.
+
+**Input**
+
+```json
+{ "outcome": "approved", "by": "manager" }
+```
+
+`outcome` is `approved` or `rejected`.
+
+**Output**
+
+The updated pending-task record, including `tool_result` when approved and `resolution`.
+
+---
+
+
+
+## Ingestion
+
+
+
+### `POST /policies/upload`
+
+Upload one or more policy PDFs (`multipart` file field `files`). Runs extraction and appends rules with `status: "pending_review"`. Returns the new rule dicts.
+
+### `GET /ingestion/policies`
+
+Every rule in `policies.json`.
+
+### `GET /ingestion/documents`
+
+Uploaded documents and their extracted text.
+
+### `PATCH /ingestion/policies/{policy_id}`
+
+Confirm, edit, or park one extracted rule. Unknown `policy_id` is 404. Omitted fields are left unchanged.
+
+**Input**
+
+```json
+{
+  "status": "active",
+  "decision": "requires_approval",
+  "approval_role": "manager"
+}
+```
+
+`status` is `active`, `draft`, or `pending_review`. 
+`decision` is `allow`, `block`, or `requires_approval`. 
+Only `active` rules are enforced. 
+Optional fields: `name`, `category`, `action`, `conditions`.
+
+**Output**
+The updated policy.

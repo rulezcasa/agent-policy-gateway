@@ -1,11 +1,8 @@
-"""Turns uploaded policy PDFs into validated entries in documents.json and
-policies.json.
+"""Turns uploaded policy PDFs into validated entries under backend/app/db/.
 
 Text/table extraction runs in parallel across documents (CPU-only, no GPU).
 LLM extraction also runs concurrently across documents, but every request
-goes to the same single model instance on the ZGX Nano — vLLM's continuous
-batching handles the actual parallelism server-side, so this never spins up
-more than one model.
+goes to the same Ollama model the agents use (qwen3.6-35b-q8-tools).
 """
 
 from __future__ import annotations
@@ -20,11 +17,12 @@ from pathlib import Path
 
 import pdfplumber
 
-from . import llm_client
+from . import extraction
 
-DATA_DIR = Path(__file__).resolve().parents[2] / "data"
-DOCUMENTS_PATH = DATA_DIR / "documents.json"
-POLICIES_PATH = DATA_DIR / "policies.json"
+DB_DIR = Path(__file__).resolve().parents[1] / "db"
+POLICIES_PATH = DB_DIR / "policies.json"
+CATEGORIES_PATH = DB_DIR / "categories.json"
+DOCUMENTS_DIR = DB_DIR / "documents"
 
 # Where an upload endpoint saves incoming files before processing them —
 # process_documents() only ever deals in paths that already exist on disk.
@@ -97,7 +95,7 @@ def _validate_rule(rule: dict, tool_manifest: list[dict]) -> tuple[dict, bool]:
     for condition in rule.get("conditions", []):
         if condition.get("field") not in valid_fields:
             needs_review = True
-        if condition.get("operator") not in llm_client.CONDITION_OPERATORS:
+        if condition.get("operator") not in extraction.CONDITION_OPERATORS:
             needs_review = True
 
     return rule, needs_review
@@ -113,13 +111,52 @@ def _build_policy(rule: dict, doc_id: str, needs_review: bool) -> dict:
         "conditions": rule["conditions"],
         "decision": rule["decision"],
         "approval_role": rule.get("approval_role"),
-        "priority": rule["priority"],
         "version": 1,
         "status": "pending_review",
         "source_doc": doc_id,
         "original_text": rule["original_text"],
         "needs_review": needs_review,
     }
+
+
+def list_documents() -> list[dict]:
+    if not DOCUMENTS_DIR.exists():
+        return []
+    return [json.loads(path.read_text()) for path in sorted(DOCUMENTS_DIR.glob("*.json"))]
+
+
+def _write_documents(records: list[dict]) -> None:
+    DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
+    for record in records:
+        path = DOCUMENTS_DIR / f"{record['doc_id']}.json"
+        path.write_text(json.dumps(record, indent=2))
+
+
+def load_categories() -> list[dict] | None:
+    if not CATEGORIES_PATH.exists():
+        return None
+    return json.loads(CATEGORIES_PATH.read_text())
+
+
+def save_categories(categories: list[dict]) -> None:
+    DB_DIR.mkdir(parents=True, exist_ok=True)
+    CATEGORIES_PATH.write_text(json.dumps(categories, indent=2))
+
+
+async def get_or_generate_categories(
+    tool_manifest: list[dict], sample_text: str, *, force_refresh: bool = False
+) -> list[dict]:
+    """Reuse the tenant taxonomy in app/db/categories.json, or generate it
+    once and write it there. One taxonomy per tenant, not one per document.
+    """
+    if not force_refresh:
+        cached = load_categories()
+        if cached is not None:
+            return cached
+
+    categories = await extraction.generate_categories(tool_manifest, sample_text)
+    save_categories(categories)
+    return categories
 
 
 def _append_json(path: Path, records: list[dict]) -> None:
@@ -148,9 +185,8 @@ def update_policy(policy_id: str, updates: dict) -> dict:
 
 
 async def process_documents(file_paths: list[Path]) -> list[dict]:
-    """Entrypoint: PDFs in, validated policy rule dicts out (also appended
-    to documents.json / policies.json). This is the function an upload
-    endpoint would call once one exists.
+    """Entrypoint: PDFs in, validated policy rule dicts out (also written
+    to app/db/documents/, app/db/categories.json, and app/db/policies.json).
     """
     texts_by_path = await _extract_all_text(file_paths)
 
@@ -165,15 +201,15 @@ async def process_documents(file_paths: list[Path]) -> list[dict]:
         }
         for path in file_paths
     ]
-    _append_json(DOCUMENTS_PATH, doc_records)
+    _write_documents(doc_records)
 
-    tool_manifest = await llm_client.fetch_tool_manifest()
+    tool_manifest = await extraction.fetch_tool_manifest()
     sample_text = next(iter(texts_by_path.values()), "")
-    categories = await llm_client.get_or_generate_categories(tool_manifest, sample_text)
+    categories = await get_or_generate_categories(tool_manifest, sample_text)
 
     raw_rule_lists = await asyncio.gather(
         *(
-            llm_client.extract_rules_from_text(texts_by_path[path], tool_manifest, categories)
+            extraction.extract_rules_from_text(texts_by_path[path], tool_manifest, categories)
             for path in file_paths
         )
     )
@@ -203,4 +239,7 @@ if __name__ == "__main__":
     print(f"Processing {len(paths)} document(s)...")
     results = asyncio.run(process_documents(paths))
     flagged = sum(1 for r in results if r["needs_review"])
-    print(f"Extracted {len(results)} rule(s) -> {POLICIES_PATH} ({flagged} flagged for review)")
+    print(
+        f"Extracted {len(results)} rule(s) -> {POLICIES_PATH} "
+        f"({flagged} flagged for review); categories -> {CATEGORIES_PATH}"
+    )

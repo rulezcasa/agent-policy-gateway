@@ -27,7 +27,6 @@ export interface Policy {
   conditions: PolicyCondition[];
   decision: Decision;
   approval_role?: string;
-  priority: number;
   version: number;
   status: "active" | "draft" | "pending_review";
   source_doc?: string; // original uploaded file

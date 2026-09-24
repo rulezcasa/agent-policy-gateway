@@ -1,23 +1,27 @@
 MAPLEWOOD HOME & LIVING
-Internal Memo — Refunds & Discounts
-Last updated: March 2026 (supersedes the Jan 2024 version, please discard old copies)
+Operations memo
+Week of 9 March 2026
+From: Marcus Hale, Operations Lead
+To: Floor leads, the support desk, and the assistant pilot
+Re: Monday huddle notes, plus the refund and discount mess accounting keeps flagging
 
-Hi team,
+Team,
 
-After last quarter's mess with the chargebacks we sat down with accounting and
-tidied up our refund rules. This applies to everyone on the support desk
-INCLUDING the new AI assistant we are piloting.
+This is the write-up from Monday, with the bits Priya asked me to stop leaving in Slack. Most of it is the usual floor stuff. The money paragraphs are the ones that actually bind the desk, and they bind the assistant we are piloting the same way they bind you. If you only skim one section, skim those.
 
-Support staff and the assistant can issue refunds up to $100 without asking
-anyone. Anything above $100 needs sign-off from a shift manager before the
-money goes out. If a refund is above $500 it must go to Priya (Finance
-Director) personally — no exceptions, even for regulars.
+Floor first, before I forget. Spring set lands Thursday. Lighting moves to the front window, the candle table stays where it is, and the two Linden floor models are display only. If someone wants that sofa, take a deposit on a new one and tell them about six weeks. Do not sell the one they are sitting on. Anita is out Wednesday and Thursday for the Portland trade show, so Lena has opens. If the queue gets past four, pull someone off receiving instead of letting the chat pile up.
 
-We do NOT refund gift card purchases in cash, ever. Store credit only.
+Receiving also asked me to pass this on: the narrow-label printer is jamming again, use the wide stock until the roller shows up, and please stop parking the return totes in front of the fire door. Facilities says the hallway light gets replaced Friday. Closing leads already have the new alarm procedure. It is not taped inside the cabinet anymore.
 
-Nobody on the desk (human or otherwise) may apply a discount larger than 20%
-to any item. I don't care how upset the customer is.
+Now the part accounting cares about. We sat with them after last quarter's chargebacks and they were not subtle. On refunds, support staff and the assistant can issue the refund themselves when it is $100 or under. Do not go find a manager for a $40 lamp. The moment the refund is above $100, it does not go out until a shift manager has signed off. And if the refund is above $500, it goes to Priya Shah, Finance Director, personally. I do not want another "but they are a regular" note. She sent two of those back in February. There is no exception for regulars, for staff friends, or for someone who sounds like they might post a review.
+
+Returns are not the same lever as a goodwill refund, and people keep treating them as if they were. A return is only something we process when the order has already been delivered, and only while we are still inside 10 days of the date the order was placed. That date is ordered_on on the order, not the day they emailed, and not the day the box showed up in the car. If the order is still processing, it is not a return. If it has been dispatched, it is not a return yet either. They have to receive it first. If ordered_on is more than 10 days ago, the window is closed even if the carton is unopened and they are being perfectly nice about it. Tell them we cannot take the return. Do not force it through to be helpful.
+
+Discounts. I am done with the till notes that say the customer was upset so someone took 30% off a kettle. A sorry discount, a goodwill gesture, a make-good, call it whatever you like, cannot be larger than 20% of the item. Not because they drove in from Salem, not because it is a wedding registry, not because the chat has been going for forty minutes. If 20% will not settle them, offer them a call with me. Do not invent a bigger number on the desk, and do not let the assistant invent one either.
+
+A couple of smaller things that are not policy, just so they are written down somewhere. The staff meal on Friday is the leftover catering from the buyer meeting, first come. And if a vendor rep shows up without an appointment, they wait in the front, they do not wander the stockroom. Jonah was very clear about that after last week's surprise visit.
 
 Thanks all,
-Marcus
+Marcus Hale
 Operations Lead
+Maplewood Home & Living

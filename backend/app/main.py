@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from .agents.state import init_state
 from .api.router import router as business_router
@@ -17,6 +18,12 @@ app = FastAPI(
     version="1.0.0",
     description="Demo business-system endpoints for Maplewood Home & Living.",
     lifespan=lifespan,
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 app.include_router(business_router, prefix="/api")
 

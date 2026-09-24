@@ -6,7 +6,7 @@ _DIR = Path(__file__).parent
 
 
 def load_prompt(name: str) -> str:
-    """Load a prompt by agent name, for example ``refund_agent``."""
+    """Load a prompt by agent name, for example ``order_agent``."""
     path = _DIR / f"{name}.md"
     if not path.is_file():
         raise FileNotFoundError(f"No prompt file for {name!r} at {path}")

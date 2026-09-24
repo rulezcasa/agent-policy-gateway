@@ -8,6 +8,7 @@ from langchain.agents import create_agent
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_ollama import ChatOllama
 
+from ..settings import agent_mcp_url
 from .prompts import load_prompt
 from .state import get_state
 
@@ -19,7 +20,7 @@ async def invoke_support_agent() -> str:
         {
             "my_server": {
                 "transport": "streamable_http",
-                "url": "http://127.0.0.1:8001/mcp",
+                "url": agent_mcp_url(),
             },
         }
     )

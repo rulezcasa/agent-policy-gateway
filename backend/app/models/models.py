@@ -139,5 +139,20 @@ class ReturnResponse(ApiResponse):
     reason: str
 
 
+class ApprovalRequest(BaseModel):
+    outcome: Literal["approved", "rejected"]
+    by: str = Field(min_length=1)
+
+
+class PolicyReviewRequest(BaseModel):
+    status: Literal["active", "draft", "pending_review"] | None = None
+    name: str | None = None
+    category: str | None = None
+    action: str | None = None
+    conditions: list[dict] | None = None
+    decision: Literal["allow", "block", "requires_approval"] | None = None
+    approval_role: str | None = None
+
+
 class ModelConfigMixin:
     model_config = ConfigDict(extra="forbid")

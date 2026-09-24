@@ -1,69 +1,33 @@
-"""Talks to the two external systems ingestion depends on: the model served
-on the ZGX Nano, and the MCP tool server exposing the business tools.
+"""Ingestion extraction: tool list, category prompt, and rule prompt.
 
-Nothing here reads a PDF or writes to policies.json — that orchestration
-lives in pipeline.py. This module only knows how to fetch the tool manifest,
-generate/cache a category taxonomy, and run one guided-JSON extraction call.
+The Ollama connection is app.llm.guided_json. This file only builds the
+prompts and fetches the MCP tool list those prompts are grounded on.
 """
 
 from __future__ import annotations
 
-import json
-import os
-import re
-from pathlib import Path
-
-from dotenv import load_dotenv
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
-from openai import AsyncOpenAI
 
-load_dotenv()
-
-DATA_DIR = Path(__file__).resolve().parents[2] / "data"
-TOOL_MANIFEST_PATH = DATA_DIR / "tool_manifest.json"
-CATEGORIES_PATH = DATA_DIR / "categories.json"
-
-LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://localhost:8080/v1")
-LLM_MODEL = os.environ.get("LLM_MODEL", "nvidia/Qwen3.6-35B-A3B-NVFP4")
-MCP_SERVER_URL = os.environ.get("MCP_SERVER_URL", "http://127.0.0.1:8001/mcp")
+from ..llm import guided_json
+from ..settings import MCP_SERVER_URL
 
 CONDITION_OPERATORS = [">", ">=", "<", "<=", "==", "!=", "in"]
 
-_client = AsyncOpenAI(base_url=LLM_BASE_URL, api_key="EMPTY")
 
-
-def _read_cache(path: Path) -> list[dict] | None:
-    if not path.exists():
-        return None
-    return json.loads(path.read_text())
-
-
-def _write_cache(path: Path, data: list[dict]) -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2))
-
-
-async def fetch_tool_manifest(
-    server_url: str = MCP_SERVER_URL, *, force_refresh: bool = False
-) -> list[dict]:
-    """Query the MCP tool server for its tool list and cache the result.
+async def fetch_tool_manifest(server_url: str = MCP_SERVER_URL) -> list[dict]:
+    """Query the live MCP tool server (`tools/list`) on every call.
 
     Each entry is {"name", "description", "parameters"}, where "parameters"
     is the tool's raw JSON-schema input spec — pipeline.py uses it to ground
     conditions[].field against that tool's real argument names.
     """
-    if not force_refresh:
-        cached = _read_cache(TOOL_MANIFEST_PATH)
-        if cached is not None:
-            return cached
-
     async with streamablehttp_client(server_url) as (read, write, _):
         async with ClientSession(read, write) as session:
             await session.initialize()
             result = await session.list_tools()
 
-    manifest = [
+    return [
         {
             "name": tool.name,
             "description": tool.description or "",
@@ -71,22 +35,14 @@ async def fetch_tool_manifest(
         }
         for tool in result.tools
     ]
-    _write_cache(TOOL_MANIFEST_PATH, manifest)
-    return manifest
 
 
-async def get_or_generate_categories(
-    tool_manifest: list[dict], sample_text: str, *, force_refresh: bool = False
-) -> list[dict]:
+async def generate_categories(tool_manifest: list[dict], sample_text: str) -> list[dict]:
     """Propose a small category taxonomy for this tenant from its tools plus
-    a sample of its policy text, and cache it. Each entry is
-    {"name", "description"}. Called once per tenant, not once per document.
+    a sample of its policy text. Each entry is {"name", "description"}.
+    Called once per tenant, not once per document. Caching the result under
+    app/db/categories.json is pipeline.py's job.
     """
-    if not force_refresh:
-        cached = _read_cache(CATEGORIES_PATH)
-        if cached is not None:
-            return cached
-
     tools_summary = "\n".join(f"- {t['name']}: {t['description']}" for t in tool_manifest)
     schema = {
         "type": "object",
@@ -118,10 +74,8 @@ async def get_or_generate_categories(
         f"Available agent tools:\n{tools_summary}\n\n"
         f"Sample policy text:\n{sample_text[:4000]}"
     )
-    result = await _guided_json(system_prompt, user_prompt, schema)
-    categories = result["categories"]
-    _write_cache(CATEGORIES_PATH, categories)
-    return categories
+    result = await guided_json(system_prompt, user_prompt, schema)
+    return result["categories"]
 
 
 async def extract_rules_from_text(
@@ -156,7 +110,6 @@ async def extract_rules_from_text(
             },
             "decision": {"type": "string", "enum": ["allow", "block", "requires_approval"]},
             "approval_role": {"type": ["string", "null"]},
-            "priority": {"type": "integer"},
             "original_text": {"type": "string"},
         },
         "required": [
@@ -166,7 +119,6 @@ async def extract_rules_from_text(
             "action",
             "conditions",
             "decision",
-            "priority",
             "original_text",
         ],
     }
@@ -194,60 +146,10 @@ async def extract_rules_from_text(
         "empty if the rule always applies once action matches.\n"
         "- decision: allow, block, or requires_approval.\n"
         "- approval_role: who can approve, only when decision is requires_approval.\n"
-        "- priority: higher wins when multiple rules could match the same call "
-        "(e.g. a stricter dollar threshold should outrank a looser one).\n"
         "- original_text: the literal sentence(s) this rule was extracted from.\n\n"
         f"Available agent tools:\n{tools_summary}"
     )
     user_prompt = f"Policy document:\n{doc_text}"
 
-    result = await _guided_json(system_prompt, user_prompt, schema)
+    result = await guided_json(system_prompt, user_prompt, schema)
     return result["rules"]
-
-
-async def _guided_json(system_prompt: str, user_prompt: str, schema: dict) -> dict:
-    # response_format/json_schema is the OpenAI-standard structured-output
-    # request, which this vLLM version honors — the older guided_json
-    # extra_body extension was silently ignored (no error, just plain text).
-    response = await _client.chat.completions.create(
-        model=LLM_MODEL,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        temperature=0.2,
-        max_tokens=4096,
-        response_format={
-            "type": "json_schema",
-            "json_schema": {"name": "extraction_result", "schema": schema, "strict": True},
-        },
-        extra_body={
-            "chat_template_kwargs": {"enable_thinking": False},
-        },
-    )
-    choice = response.choices[0]
-    content = choice.message.content
-    if not content:
-        reasoning = getattr(choice.message, "reasoning_content", None)
-        raise RuntimeError(
-            f"Model returned no content (finish_reason={choice.finish_reason!r}). "
-            f"reasoning_content={reasoning!r}"
-        )
-    return _extract_json(content)
-
-
-_THINK_BLOCK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
-
-
-def _extract_json(content: str) -> dict:
-    # Some serving configs don't fully honor enable_thinking=False and still
-    # emit a <think>...</think> block ahead of the actual JSON — strip it
-    # before parsing rather than assuming content is pure JSON.
-    cleaned = _THINK_BLOCK_RE.sub("", content).strip()
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(
-            f"Model response wasn't valid JSON after stripping <think> blocks. "
-            f"Raw content (first 1000 chars): {content[:1000]!r}"
-        ) from exc

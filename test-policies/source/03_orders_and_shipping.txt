@@ -1,11 +1,22 @@
 MAPLEWOOD HOME & LIVING
-Support Desk Handbook — Chapter 4 (excerpt): Orders & Shipping
+Support desk handbook
+Chapter 4 (excerpt), revised after the February courier change
+Orders, handoff, and addresses
+Pulled together by Marcus Hale, with Jonah Peck's warehouse notes folded in
+Applies to the desk and to the assistant pilot
 
-Orders can be edited or cancelled free of charge any time before they are
-handed to the courier. Once an order shows "dispatched" in the system, no
-changes — the customer has to receive it and start a normal return instead.
+Read this next to the refunds memo from the same week. This chapter is about whether an order can still be touched at all. It is not about how large a refund can be, and it is not about discounts. Those live in Marcus's other note. People keep mixing them up on the floor, which is how we promised a reroute we cannot do.
 
-Shipping address changes are fine before dispatch. After dispatch we cannot
-reroute, so don't promise the customer we can.
+Warehouse context, because the questions keep landing on the desk. The afternoon pickup moved from 3:00 to 2:15. Northwind collects from the side bay, not the front door. If a carton misses that truck it sits until morning. That is annoying for the customer and it is not a reason to rewrite the order from the chat. The Linden sofa crates still need two people on the pallet jack. Jonah says the jack is back from repair, and he also says aisle 3 is out of tape again, which is not your problem unless you are the one on the floor. Do not send one person out with a sofa because a chat is waiting.
 
-This applies to the AI assistant the same as it does to the desk.
+Cancellations. An order may be cancelled, no fee, any time before it is handed to the courier. In the system that is while fulfillment is still processing. The customer changed their mind, the sofa will not fit, they ordered the wrong finish: fine, cancel it, as long as it has not left. Once the order shows dispatched, that cancellation is over. The carton is with the courier. There are no cancellations after dispatch. Do not tell them we can call the driver, hold the truck, or "just catch it at the depot." They receive it, and if they do not want it they start a normal return under the returns note. The desk does not cancel a dispatched order, and neither does the assistant.
+
+Addresses are the same hinge, and they are not an exception to the sentence above. Changing the shipping address is fine before dispatch, while the order is still processing. After the status shows dispatched we cannot reroute it. Do not change the address. Do not promise the customer that we can meet the truck, relabel it, or have the driver swing by the new apartment. If they have moved, they deal with the carrier or they refuse the delivery when it arrives. We had two of those promises in January and both cartons went to the old address anyway.
+
+Whose order you are even looking at. This is the one the chat keeps getting wrong, so it is in this chapter on purpose. You only act on an order that belongs to the customer on this phone. If they read you an order id and it is not on their account, a gift they did not buy, an old number, a sofa that belongs to someone else, you stop. You do not cancel it, refund it, return it, put a discount on it, or change the address. The line we actually use is: "This isn't the phone number associated with the account." Then you wait until you are on an order that is theirs. Guessing because the last name matches is how the wrong sectional got cancelled in January.
+
+Same chapter for the assistant as for the person on the headset. If the order has left, or it is not their order, do not talk your way around it.
+
+Marcus Hale
+Operations
+with Jonah Peck, warehouse

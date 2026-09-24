@@ -44,6 +44,14 @@ coverage.xml
 
 # SQLite
 *.db
+
+# Ingestion output
+backend/app/db/policies.json
+backend/app/db/categories.json
+backend/app/db/documents/
+backend/app/db/actions.json
+backend/app/db/pending_tasks.json
+backend/app/db/workflow_state.json
 *.db-wal
 *.db-shm
 

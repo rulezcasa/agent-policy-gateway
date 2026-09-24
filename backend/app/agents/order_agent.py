@@ -1,4 +1,4 @@
-"""Refunds and billing specialist."""
+"""Order agent: cancellations, refunds, returns, and discounts."""
 
 from __future__ import annotations
 
@@ -8,20 +8,21 @@ from langchain.agents import create_agent
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_ollama import ChatOllama
 
+from ..settings import agent_mcp_url
 from .prompts import load_prompt
 from .state import get_state
 
 
-SYSTEM_PROMPT = load_prompt("refund_agent")
+SYSTEM_PROMPT = load_prompt("order_agent")
 
 
-async def invoke_refund_agent() -> str:
-    """Handle the current turn for the refund agent."""
+async def invoke_order_agent() -> str:
+    """Handle the current turn for the order agent."""
     client = MultiServerMCPClient(
         {
             "my_server": {
                 "transport": "streamable_http",
-                "url": "http://127.0.0.1:8001/mcp",
+                "url": agent_mcp_url(),
             },
         }
     )
@@ -40,7 +41,7 @@ async def invoke_refund_agent() -> str:
     messages = [
         (
             "system",
-            f"{SYSTEM_PROMPT}\n\nCurrent refund agent state:\n{json.dumps(saved_state, indent=2)}",
+            f"{SYSTEM_PROMPT}\n\nCurrent order agent state:\n{json.dumps(saved_state, indent=2)}",
         ),
         ("human", saved_state.get("user_message")),
     ]

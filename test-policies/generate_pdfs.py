@@ -25,29 +25,63 @@ def _escape(text: str) -> str:
     return text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
 
+def _wrap(text: str, width: int = 88) -> list[str]:
+    lines: list[str] = []
+    for para in text.splitlines():
+        if not para.strip():
+            lines.append("")
+            continue
+        current = ""
+        for word in para.split():
+            trial = word if not current else f"{current} {word}"
+            if len(trial) <= width:
+                current = trial
+            else:
+                if current:
+                    lines.append(current)
+                current = word
+        if current:
+            lines.append(current)
+    return lines
+
+
 def write_pdf(src: Path, dest: Path) -> None:
     width, height = 612, 792
-    margin, leading = 50, 14
-    y = height - margin
-    ops = ["BT", "/F1 11 Tf"]
-    for line in _latin1(src.read_text(encoding="utf-8")).splitlines():
-        if y < margin:
-            break
-        ops.append(f"1 0 0 1 {margin} {y} Tm ({_escape(line)}) Tj")
-        y -= leading
-    ops.append("ET")
-    stream = "\n".join(ops).encode("latin-1")
+    margin, leading, font_size = 54, 14, 11
+    lines_per_page = (height - 2 * margin) // leading
+    wrapped = _wrap(_latin1(src.read_text(encoding="utf-8")))
+    pages = [
+        wrapped[i : i + lines_per_page] for i in range(0, len(wrapped), lines_per_page)
+    ] or [[]]
 
-    objects = [
+    def stream_for(lines: list[str]) -> bytes:
+        y = height - margin
+        ops = ["BT", f"/F1 {font_size} Tf"]
+        for line in lines:
+            ops.append(f"1 0 0 1 {margin} {y} Tm ({_escape(line)}) Tj")
+            y -= leading
+        ops.append("ET")
+        return "\n".join(ops).encode("latin-1")
+
+    font_num = 3 + len(pages) * 2
+    page_nums = [3 + i * 2 for i in range(len(pages))]
+    content_nums = [4 + i * 2 for i in range(len(pages))]
+    kids = " ".join(f"{n} 0 R" for n in page_nums)
+    objects: list[bytes] = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
-        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        (
-            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {width} {height}] "
-            "/Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>"
-        ).encode("latin-1"),
-        b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream",
-        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        f"<< /Type /Pages /Kids [{kids}] /Count {len(pages)} >>".encode("latin-1"),
     ]
+    for i, lines in enumerate(pages):
+        stream = stream_for(lines)
+        objects.append(
+            (
+                f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {width} {height}] "
+                f"/Contents {content_nums[i]} 0 R "
+                f"/Resources << /Font << /F1 {font_num} 0 R >> >> >>"
+            ).encode("latin-1")
+        )
+        objects.append(b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream")
+    objects.append(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
 
     out = bytearray(b"%PDF-1.4\n")
     offsets = [0]
