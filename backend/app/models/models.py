@@ -145,7 +145,7 @@ class ApprovalRequest(BaseModel):
 
 
 class PolicyReviewRequest(BaseModel):
-    status: Literal["active", "draft", "pending_review"] | None = None
+    status: Literal["active", "inactive", "draft", "pending_review"] | None = None
     name: str | None = None
     category: str | None = None
     action: str | None = None

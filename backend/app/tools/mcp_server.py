@@ -170,7 +170,7 @@ def cancel_order(order_id: str, reason: str) -> CancelResponse:
 
 @mcp.tool()
 def return_order(order_id: str, reason: str) -> ReturnResponse:
-    """Return a delivered order within 10 days of ordered_on and refund its full amount. POST /orders/{order_id}/return."""
+    """Return an order and refund its full amount. POST /orders/{order_id}/return."""
     try:
         return services.return_order(
             order_id, ReturnRequest(order_id=order_id, reason=reason)

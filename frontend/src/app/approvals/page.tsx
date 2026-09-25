@@ -1,101 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-
-import { API_URL } from "@/lib/api";
-
-type PendingTask = {
-  action_id: string;
-  status: string;
-  tool: string;
-  arguments: Record<string, unknown>;
-  normalized_arguments?: Record<string, unknown>;
-  decision: string;
-  policy_ids?: string[];
-  required_approval?: string | null;
-  llm_reasoning?: string | null;
-  agent_id?: string;
-};
+import { useState } from "react";
+import { ApprovalQueue } from "@/components/actions/approval-queue";
+import { StatCard } from "@/components/ui/stat-card";
+import { getApprovals, getIngestionPolicies } from "@/lib/api";
+import { useLiveResource } from "@/lib/use-live-resource";
+import type { PendingTask } from "@/lib/types";
 
 export default function ApprovalsPage() {
-  const [tasks, setTasks] = useState<PendingTask[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const snapshot = useLiveResource(async () => {
+    const [tasks, policies] = await Promise.all([getApprovals(), getIngestionPolicies()]);
+    return { tasks, policies };
+  });
+  const [overrides, setOverrides] = useState<Record<string, PendingTask>>({});
+  const tasks = (snapshot.data?.tasks ?? []).map((task) => overrides[task.action_id] ?? task);
+  const policies = snapshot.data?.policies ?? [];
+  const pending = tasks.filter((task) => task.status === "pending_approval" || task.status === "executing").length;
+  const approved = tasks.filter((task) => task.status === "executed").length;
+  const rejected = tasks.filter((task) => task.status === "rejected").length;
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/approvals`);
-      if (!res.ok) throw new Error(`Could not load approvals (${res.status})`);
-      setTasks(await res.json());
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load approvals");
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-    const timer = setInterval(() => void load(), 2000);
-    return () => clearInterval(timer);
-  }, [load]);
-
-  async function decide(actionId: string, outcome: "approved" | "rejected") {
-    const res = await fetch(`${API_URL}/api/approvals/${actionId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ outcome, by: "manager_priya" }),
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.detail ?? `Could not ${outcome} ${actionId}`);
-    }
-    await load();
-  }
-
-  return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-8">
-      <h1 className="text-2xl font-semibold">Approvals</h1>
-      <p className="text-sm text-zinc-600">
-        Held tool calls show up here. Approving one runs it and sends the result back to the open chat.
-      </p>
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {tasks.length === 0 ? <p className="text-sm text-zinc-500">No held requests yet.</p> : null}
-      {tasks.map((task) => (
-        <article key={task.action_id} className="rounded-lg border border-zinc-200 p-4">
-          <div className="flex items-baseline justify-between gap-4">
-            <h2 className="font-medium">{task.tool}</h2>
-            <span className="text-xs uppercase tracking-wide text-zinc-500">{task.status}</span>
-          </div>
-          <p className="mt-2 text-sm">{task.llm_reasoning}</p>
-          <dl className="mt-3 grid grid-cols-[8rem_1fr] gap-y-1 text-sm">
-            <dt className="text-zinc-500">Decision</dt>
-            <dd>{task.decision}</dd>
-            <dt className="text-zinc-500">Needs</dt>
-            <dd>{task.required_approval ?? "—"}</dd>
-            <dt className="text-zinc-500">Agent</dt>
-            <dd>{task.agent_id}</dd>
-            <dt className="text-zinc-500">Arguments</dt>
-            <dd className="font-mono text-xs">{JSON.stringify(task.normalized_arguments ?? task.arguments)}</dd>
-          </dl>
-          {task.status === "pending_approval" ? (
-            <div className="mt-4 flex gap-2">
-              <button
-                className="rounded bg-black px-3 py-1.5 text-sm text-white"
-                onClick={() => void decide(task.action_id, "approved")}
-                type="button"
-              >
-                Approve
-              </button>
-              <button
-                className="rounded border border-zinc-300 px-3 py-1.5 text-sm"
-                onClick={() => void decide(task.action_id, "rejected")}
-                type="button"
-              >
-                Reject
-              </button>
-            </div>
-          ) : null}
-        </article>
-      ))}
-    </main>
-  );
+  return <div className="space-y-8">
+    <section><h2 className="text-2xl font-semibold tracking-tight text-slate-950">Approvals</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Approve or reject agent actions that are waiting for a decision.</p></section>
+    {snapshot.isLoading && !snapshot.data ? <p className="text-sm text-slate-600">Loading the approval queue…</p> : snapshot.error && !snapshot.data ? <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-800"><p>Could not load approvals. {snapshot.error}</p><button type="button" onClick={() => void snapshot.refresh()} className="mt-3 rounded-lg bg-white px-3.5 py-2 font-semibold text-rose-800 ring-1 ring-inset ring-rose-200">Try again</button></div> : <>
+      {snapshot.error && <p role="alert" className="text-sm text-rose-700">Latest refresh failed: {snapshot.error}</p>}
+      <section className="grid gap-4 sm:grid-cols-3"><StatCard label="Pending approvals" value={pending} detail="Waiting for a decision" tone="amber" icon={<span>!</span>} /><StatCard label="Approved" value={approved} detail="Allowed to proceed" tone="coral" icon={<span>✓</span>} /><StatCard label="Rejected" value={rejected} detail="Not allowed to proceed" tone="rose" icon={<span>×</span>} /></section>
+      <section><h3 className="text-lg font-semibold text-slate-950">Approval queue</h3><div className="mt-5"><ApprovalQueue tasks={tasks} policies={policies} onUpdated={(task) => setOverrides((current) => ({ ...current, [task.action_id]: task }))} /></div></section>
+    </>}
+  </div>;
 }

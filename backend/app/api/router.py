@@ -1,14 +1,16 @@
-import json
 from collections.abc import Callable
 from typing import ParamSpec, TypeVar
 
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 
 from .. import services
+from ..ingestion.extraction import fetch_tool_manifest
+from ..db.queries import customer_count, reset as reset_business_database
 from ..ingestion.pipeline import (
-    POLICIES_PATH,
     UPLOADS_DIR,
+    clear_policy_data,
     list_documents,
+    load_policies,
     process_documents,
     update_policy,
 )
@@ -101,6 +103,17 @@ def return_order(order_id: str, request: ReturnRequest) -> ReturnResponse:
 
 
 
+@router.post("/demo/policies/clear", tags=["demo"])
+def clear_policies() -> dict:
+    return clear_policy_data()
+
+
+@router.post("/demo/database/reset", tags=["demo"])
+def reset_database() -> dict:
+    reset_business_database()
+    return {"customers": customer_count()}
+
+
 @router.post("/policies/upload", tags=["ingestion"])
 async def upload_policies(files: list[UploadFile] = File(...)) -> list[dict]:
     paths = []
@@ -113,12 +126,20 @@ async def upload_policies(files: list[UploadFile] = File(...)) -> list[dict]:
 
 @router.get("/ingestion/policies", tags=["ingestion"])
 def get_extracted_policies() -> list[dict]:
-    return json.loads(POLICIES_PATH.read_text()) if POLICIES_PATH.exists() else []
+    return load_policies()
 
 
 @router.get("/ingestion/documents", tags=["ingestion"])
 def get_extracted_documents() -> list[dict]:
     return list_documents()
+
+
+@router.get("/ingestion/tools", tags=["ingestion"])
+async def get_ingestion_tools() -> list[dict]:
+    try:
+        return await fetch_tool_manifest()
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="The tool server could not be reached.") from exc
 
 
 @router.get("/actions", tags=["gateway"])
@@ -142,9 +163,21 @@ async def decide_approval(action_id: str, request: ApprovalRequest) -> dict:
 
 
 @router.patch("/ingestion/policies/{policy_id}", tags=["ingestion"])
-def review_extracted_policy(policy_id: str, request: PolicyReviewRequest) -> dict:
+async def review_extracted_policy(policy_id: str, request: PolicyReviewRequest) -> dict:
+    updates = request.model_dump(exclude_none=True)
+    if "action" in updates or "conditions" in updates:
+        current = next((policy for policy in load_policies() if policy["policy_id"] == policy_id), None)
+        if current is None:
+            raise HTTPException(status_code=404, detail=f"Unknown policy_id: {policy_id}")
+        try:
+            manifest = await fetch_tool_manifest()
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail="The tool server could not be reached.") from exc
+        action = updates.get("action", current["action"])
+        known_tools = {tool["name"] for tool in manifest}
+        updates["needs_review"] = action not in known_tools
     try:
-        return update_policy(policy_id, request.model_dump(exclude_none=True))
+        return update_policy(policy_id, updates)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

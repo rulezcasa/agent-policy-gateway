@@ -85,7 +85,7 @@ async def extract_rules_from_text(
     call. Returns raw rule dicts — grounding/validation against the tool
     manifest and writing to policies.json both happen in pipeline.py.
     """
-    action_names = [t["name"] for t in tool_manifest] + ["unmatched"]
+    action_names = [t["name"] for t in tool_manifest] + ["*", "unmatched"]
     category_names = [c["name"] for c in categories]
 
     rule_schema = {
@@ -93,7 +93,12 @@ async def extract_rules_from_text(
         "properties": {
             "name": {"type": "string"},
             "category": {"type": "string", "enum": category_names},
-            "subject_roles": {"type": "array", "items": {"type": "string"}},
+            "subject_roles": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {"type": "string", "enum": ["ai_agent"]},
+            },
             "action": {"type": "string", "enum": action_names},
             "conditions": {
                 "type": "array",
@@ -140,12 +145,30 @@ async def extract_rules_from_text(
         "structured object.\n\n"
         "For each rule:\n"
         '- action: the tool it governs. Use the exact tool name from the list '
-        'below if one clearly matches; otherwise use "unmatched".\n'
-        "- conditions: machine-checkable tests against that tool's arguments "
-        "(prefer field names that match the tool's real parameter names). Leave "
-        "empty if the rule always applies once action matches.\n"
+        'below when the rule is about one tool. Use "*" when the rule applies to '
+        "every tool, including a rule that forbids acting on someone else's order. "
+        'Use "unmatched" only when no tool and "*" both fail.\n'
+        "- subject_roles: always exactly [\"ai_agent\"]. The gateway checks every "
+        "call as ai_agent. Do not emit support_staff, customer, support_agent, "
+        "automated_assistant, or automated_assistants.\n"
+        "- conditions: tests the engine can compare to real values. Use a tool "
+        "parameter name, or one of these fields the gateway adds before comparison: "
+        "order_owner_mismatch (boolean), days_since_ordered_on (integer), fulfillment_status "
+        "(processing, dispatched, delivered, cancelled), ordered_on, amount, "
+        "currency, payment_method, order_customer_id, caller_customer_id. "
+        "Values must be numbers, booleans, or those exact status strings. "
+        "Never use a set name such as orders_not_owned_by_current_customer or "
+        "orders_with_status_processing.\n"
+        "- An order that does not belong to the customer on this phone is one "
+        "rule: action \"*\", subject_roles [\"ai_agent\"], condition "
+        "order_owner_mismatch == true, decision block.\n"
+        "- A status gate uses fulfillment_status. Before dispatch is "
+        "fulfillment_status == \"processing\". After dispatch is "
+        "fulfillment_status in [\"dispatched\", \"delivered\"].\n"
         "- decision: allow, block, or requires_approval.\n"
         "- approval_role: who can approve, only when decision is requires_approval.\n"
+        "- A sentence that says there are no exceptions to an amount table is not "
+        "its own unconditional block. Encode each tier as an amount condition.\n"
         "- original_text: the literal sentence(s) this rule was extracted from.\n\n"
         f"Available agent tools:\n{tools_summary}"
     )

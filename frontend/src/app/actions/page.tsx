@@ -1,56 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-import { API_URL } from "@/lib/api";
-
-type ActionRecord = {
-  action_id: string;
-  tool: string;
-  decision: string;
-  normalized_arguments?: Record<string, unknown>;
-  llm_reasoning?: string | null;
-  required_approval?: string | null;
-  timestamp?: string;
-};
+import { ActionFeed } from "@/components/actions/action-feed";
+import { StatCard } from "@/components/ui/stat-card";
+import { getActions, getIngestionPolicies } from "@/lib/api";
+import { useLiveResource } from "@/lib/use-live-resource";
 
 export default function ActionsPage() {
-  const [actions, setActions] = useState<ActionRecord[]>([]);
+  const snapshot = useLiveResource(async () => {
+    const [actions, policies] = await Promise.all([getActions(), getIngestionPolicies()]);
+    return { actions, policies };
+  });
+  const actions = snapshot.data?.actions ?? [];
+  const policies = snapshot.data?.policies ?? [];
+  const count = (decision: "allow" | "block" | "requires_approval") => actions.filter((item) => item.decision === decision).length;
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const res = await fetch(`${API_URL}/api/actions`);
-      if (!res.ok || cancelled) return;
-      setActions(await res.json());
-    }
-    void load();
-    const timer = setInterval(() => void load(), 2000);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, []);
-
-  return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-8">
-      <h1 className="text-2xl font-semibold">Actions</h1>
-      {actions.length === 0 ? <p className="text-sm text-zinc-500">No intercepted calls yet.</p> : null}
-      {actions.map((action) => (
-        <article key={action.action_id} className="rounded-lg border border-zinc-200 p-4 text-sm">
-          <div className="flex items-baseline justify-between gap-4">
-            <h2 className="font-medium">{action.tool}</h2>
-            <span className="text-xs uppercase tracking-wide text-zinc-500">{action.decision}</span>
-          </div>
-          {action.llm_reasoning ? <p className="mt-2">{action.llm_reasoning}</p> : null}
-          <p className="mt-2 font-mono text-xs text-zinc-600">
-            {JSON.stringify(action.normalized_arguments ?? {})}
-          </p>
-          {action.required_approval ? (
-            <p className="mt-2 text-zinc-600">Approval: {action.required_approval}</p>
-          ) : null}
-        </article>
-      ))}
-    </main>
-  );
+  return <div className="space-y-8">
+    <section><h2 className="text-2xl font-semibold tracking-tight text-slate-950">Agent actions</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">See each agent action and whether it was allowed, blocked, or is waiting for approval.</p></section>
+    {snapshot.isLoading && !snapshot.data ? <p className="text-sm text-slate-600">Loading actions…</p> : snapshot.error && !snapshot.data ? <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-800"><p>Could not load the action feed. {snapshot.error}</p><button type="button" onClick={() => void snapshot.refresh()} className="mt-3 rounded-lg bg-white px-3.5 py-2 font-semibold text-rose-800 ring-1 ring-inset ring-rose-200">Try again</button></div> : <>
+      {snapshot.error && <p role="alert" className="text-sm text-rose-700">Latest refresh failed: {snapshot.error}</p>}
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><StatCard label="Agent actions" value={actions.length} detail="Actions recorded so far" icon={<span>◷</span>} /><StatCard label="Allowed" value={count("allow")} detail="Allowed to proceed" tone="coral" icon={<span>✓</span>} /><StatCard label="Blocked" value={count("block")} detail="Stopped by policy" tone="rose" icon={<span>×</span>} /><StatCard label="Approval required" value={count("requires_approval")} detail="Waiting for a decision" tone="amber" icon={<span>!</span>} /></section>
+      <section><div><h3 className="text-lg font-semibold text-slate-950">Action feed</h3></div><div className="mt-5"><ActionFeed actions={actions} policies={policies} /></div></section>
+    </>}
+  </div>;
 }

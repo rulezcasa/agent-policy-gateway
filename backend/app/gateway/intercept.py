@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from .. import services
 from ..policy_engine.evaluator import evaluate
@@ -31,7 +31,7 @@ async def intercept(tool: str, arguments: dict) -> str:
 
     order_context = _order_context(raw, workflow.get("phone"))
     normalized = await normalize(tool, raw, order_context)
-    for key in ("order_customer_id", "caller_customer_id", "order_owner_mismatch"):
+    for key in ("order_customer_id", "caller_customer_id", "order_owner_mismatch", "days_since_ordered_on"):
         if key in order_context and order_context[key] is not None:
             normalized["arguments"][key] = order_context[key]
     verdict = evaluate(
@@ -41,9 +41,9 @@ async def intercept(tool: str, arguments: dict) -> str:
     )
     reasoning = None
     customer_message = None
-    winner_id = (verdict.get("policy") or {}).get("policy_id")
+    winner = verdict.get("policy")
     if verdict["decision"] != "allow":
-        if winner_id == OWNERSHIP_POLICY_ID:
+        if _is_ownership_policy(winner):
             customer_message = OWNERSHIP_CUSTOMER_MESSAGE
             reasoning = customer_message
         else:
@@ -67,7 +67,12 @@ async def intercept(tool: str, arguments: dict) -> str:
     append_action(record)
 
     if verdict["decision"] == "allow":
-        return await forward_tool(tool, raw)
+        result = await forward_tool(tool, raw)
+        return (
+            f"GATEWAY ALLOWED action_id={action_id}. "
+            "The policy check allowed this call. Tell the customer it went through.\n"
+            f"{result}"
+        )
 
     task = {
         **record,
@@ -91,12 +96,14 @@ def _order_context(arguments: dict, phone: str | None) -> dict:
         return {}
     data = order.model_dump()
     ordered_on = data.get("ordered_on")
+    ordered_on_value = ordered_on.isoformat() if hasattr(ordered_on, "isoformat") else ordered_on
     order_customer_id = data.get("customer_id")
     caller_customer_id = _caller_customer_id(phone)
     return {
         "fulfillment_status": data.get("fulfillment_status"),
         "payment_method": data.get("payment_method"),
-        "ordered_on": ordered_on.isoformat() if hasattr(ordered_on, "isoformat") else ordered_on,
+        "ordered_on": ordered_on_value,
+        "days_since_ordered_on": _days_since(ordered_on_value),
         "amount": data.get("amount"),
         "currency": data.get("currency"),
         "customer_id": order_customer_id,
@@ -106,6 +113,16 @@ def _order_context(arguments: dict, phone: str | None) -> dict:
     }
 
 
+def _days_since(ordered_on: str | None) -> int | None:
+    if not ordered_on:
+        return None
+    try:
+        ordered = date.fromisoformat(str(ordered_on)[:10])
+    except ValueError:
+        return None
+    return (date.today() - ordered).days
+
+
 def _caller_customer_id(phone: str | None) -> str | None:
     if not phone:
         return None
@@ -113,6 +130,17 @@ def _caller_customer_id(phone: str | None) -> str | None:
         return services.get_customer(str(phone)).customer_id
     except services.NotFoundError:
         return None
+
+
+def _is_ownership_policy(policy: dict | None) -> bool:
+    if not policy:
+        return False
+    if policy.get("policy_id") == OWNERSHIP_POLICY_ID:
+        return True
+    return any(
+        condition.get("field") == "order_owner_mismatch" and condition.get("value") is True
+        for condition in policy.get("conditions") or []
+    )
 
 
 def _agent_message(task: dict) -> str:

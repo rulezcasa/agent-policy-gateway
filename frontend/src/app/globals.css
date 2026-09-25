@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7f6f4;
+  --foreground: #141414;
+  --surface: #ffffff;
+  --surface-muted: #faf9f7;
+  --border: #e7e4e0;
+  --primary: #c44534;
+  --primary-strong: #a3382a;
 }
 
 @theme inline {
@@ -10,17 +15,69 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-coral-50: #fdf5f3;
+  --color-coral-100: #fae8e4;
+  --color-coral-200: #f5d0c8;
+  --color-coral-300: #edaa9a;
+  --color-coral-400: #e37a66;
+  --color-coral-500: #e15a48;
+  --color-coral-600: #c44534;
+  --color-coral-700: #a3382a;
+  --color-coral-800: #862f24;
+  --color-coral-900: #702b22;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+::selection { background: #f8ddd6; color: #6f2b22; }
+
+button, a, input, select { -webkit-tap-highlight-color: transparent; }
+
+button { transition: transform 150ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, color 150ms ease; }
+button:active { transform: translateY(1px); }
+
+input, select { transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease; }
+input:focus, select:focus { box-shadow: 0 0 0 3px rgb(225 90 72 / 16%); }
+
+/* Maintain restrained surfaces while keeping core content comfortable at normal desktop zoom. */
+main > div > section:first-child h2[class] {
+  font-size: clamp(30px, 2.5vw, 36px);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+}
+
+main > div > section:first-child h2[class] + p[class] {
+  font-size: 15px;
+  line-height: 1.75;
+  color: #6b6560;
+}
+
+main button[class], main a[class*="inline-flex"] {
+  min-height: 40px;
+  font-size: 14px;
+}
+
+main input[class], main select[class] { font-size: 14px; }
+
+main table thead { font-size: 12px !important; }
+main table tbody { font-size: 14px; }
+main table tbody .font-mono, main table tbody .text-xs { font-size: 13px; }
+main article blockquote { font-size: 15px !important; line-height: 1.75 !important; }
+main article dl { font-size: 14px; }
+main [role="dialog"] { font-size: 14px; }
+main [role="dialog"] h2 { font-size: 21px; line-height: 1.3; }
+main [role="dialog"] p, main [role="dialog"] dd { line-height: 1.6; }
+
+@media (max-width: 640px) {
+  main > div > section:first-child h2[class] { font-size: 29px; }
+  main h3[class] { font-size: 17px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }

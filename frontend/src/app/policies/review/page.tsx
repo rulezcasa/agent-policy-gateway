@@ -1,5 +1,5 @@
-// One-time setup conformance: human reviews & confirms each LLM-extracted rule
-// (canonical JSON shown side-by-side with the original policy text).
+import { ConnectedPolicyReviewPage } from "@/components/policies/connected-policy-review-page";
+
 export default function PolicyReviewPage() {
-  return <main className="p-8 text-xl font-semibold">Review Extracted Rules (placeholder)</main>;
+  return <ConnectedPolicyReviewPage />;
 }

@@ -32,7 +32,30 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 # Fields the gateway enriches onto an action's arguments at enforcement time
 # (see API_CONTRACTS.md) — valid condition targets even though they're not
 # arguments of the tool call itself.
-ENRICHMENT_FIELDS = {"fulfillment_status", "payment_method"}
+ENRICHMENT_FIELDS = {
+    "fulfillment_status",
+    "payment_method",
+    "ordered_on",
+    "amount",
+    "currency",
+    "order_customer_id",
+    "caller_customer_id",
+    "order_owner_mismatch",
+    "days_since_ordered_on",
+}
+WILDCARD_ACTION = "*"
+_STATUS_VALUE_FIELDS = {
+    "orders_with_status_processing": ("==", "processing"),
+    "orders_with_status_dispatched": ("==", "dispatched"),
+    "orders_with_status_dispatched_or_delivered": ("in", ["dispatched", "delivered"]),
+}
+_OWNERSHIP_MARKERS = (
+    "act only on an order",
+    "order that belongs",
+    "order belonging to someone else",
+    "not on that customer's account",
+    "orders_not_owned_by_current_customer",
+)
 
 
 def extract_text(pdf_path: Path) -> str:
@@ -79,6 +102,68 @@ def _slugify(name: str) -> str:
     return slug or "policy"
 
 
+def canonicalize_rule(rule: dict) -> dict:
+    """Rewrite extracted rules into fields the evaluator compares.
+
+    The model often emits a role, a single tool, or a made-up set name for a
+    sentence the gateway already represents as order_owner_mismatch or
+    fulfillment_status. Those rules never match, so the call is allowed.
+    """
+    updated = dict(rule)
+    conditions = [_canonicalize_condition(item) for item in rule.get("conditions") or []]
+    updated["conditions"] = conditions
+    text = f"{rule.get('name', '')}\n{rule.get('original_text', '')}".lower()
+    for condition in rule.get("conditions") or []:
+        if condition.get("value") == "orders_not_owned_by_current_customer":
+            text += "\norders_not_owned_by_current_customer"
+
+    if any(marker in text for marker in _OWNERSHIP_MARKERS):
+        updated["action"] = WILDCARD_ACTION
+        updated["decision"] = "block"
+        updated["conditions"] = [
+            {"field": "order_owner_mismatch", "operator": "==", "value": True}
+        ]
+        updated["priority"] = 100
+    elif (
+        updated.get("decision") == "block"
+        and not updated["conditions"]
+        and "no exceptions" in text
+    ):
+        # "No exceptions to the table" is not a second rule that blocks every refund.
+        updated["decision"] = "allow"
+
+    updated["subject_roles"] = ["ai_agent"]
+    return updated
+
+
+def _roles(rule: dict) -> list:
+    if rule.get("subject_roles") is not None:
+        return list(rule["subject_roles"])
+    return list((rule.get("subject") or {}).get("roles") or [])
+
+
+_STATUS_WORDS = {
+    "processing": "processing",
+    "dispatched": "dispatched",
+    "delivered": "delivered",
+    "cancelled": "cancelled",
+    "canceled": "cancelled",
+}
+
+
+def _canonicalize_condition(condition: dict) -> dict:
+    value = condition.get("value")
+    if isinstance(value, str) and value in _STATUS_VALUE_FIELDS:
+        operator, rewritten = _STATUS_VALUE_FIELDS[value]
+        return {"field": "fulfillment_status", "operator": operator, "value": rewritten}
+    updated = dict(condition)
+    if updated.get("field") == "order_status":
+        updated["field"] = "fulfillment_status"
+    if updated.get("field") == "fulfillment_status" and isinstance(updated.get("value"), str):
+        updated["value"] = _STATUS_WORDS.get(updated["value"].strip().lower(), updated["value"])
+    return updated
+
+
 def _validate_rule(rule: dict, tool_manifest: list[dict]) -> tuple[dict, bool]:
     """Grounds action + conditions[].field against the real tool manifest.
 
@@ -86,12 +171,19 @@ def _validate_rule(rule: dict, tool_manifest: list[dict]) -> tuple[dict, bool]:
     enforce: a rule that fails grounding is still saved, just flagged, so a
     human catches it on /policies/review instead of it silently never firing.
     """
-    tool = next((t for t in tool_manifest if t["name"] == rule.get("action")), None)
-    needs_review = tool is None
-
-    valid_fields = ENRICHMENT_FIELDS | set(
-        tool["parameters"].get("properties", {}) if tool else {}
-    )
+    action = rule.get("action")
+    if action == WILDCARD_ACTION:
+        parameter_names = set().union(
+            *(tool["parameters"].get("properties", {}) for tool in tool_manifest)
+        ) if tool_manifest else set()
+        valid_fields = ENRICHMENT_FIELDS | parameter_names
+        needs_review = False
+    else:
+        tool = next((item for item in tool_manifest if item["name"] == action), None)
+        needs_review = tool is None
+        valid_fields = ENRICHMENT_FIELDS | set(
+            tool["parameters"].get("properties", {}) if tool else {}
+        )
     for condition in rule.get("conditions", []):
         if condition.get("field") not in valid_fields:
             needs_review = True
@@ -99,6 +191,12 @@ def _validate_rule(rule: dict, tool_manifest: list[dict]) -> tuple[dict, bool]:
             needs_review = True
 
     return rule, needs_review
+
+
+def rule_needs_review(action: str, conditions: list[dict], tool_manifest: list[dict]) -> bool:
+    """True when the action or its condition fields are not grounded on a live tool."""
+    _, needs_review = _validate_rule({"action": action, "conditions": conditions}, tool_manifest)
+    return needs_review
 
 
 def _build_policy(rule: dict, doc_id: str, needs_review: bool) -> dict:
@@ -111,6 +209,7 @@ def _build_policy(rule: dict, doc_id: str, needs_review: bool) -> dict:
         "conditions": rule["conditions"],
         "decision": rule["decision"],
         "approval_role": rule.get("approval_role"),
+        "priority": rule.get("priority") or 0,
         "version": 1,
         "status": "pending_review",
         "source_doc": doc_id,
@@ -132,10 +231,44 @@ def _write_documents(records: list[dict]) -> None:
         path.write_text(json.dumps(record, indent=2))
 
 
+def clear_policy_data() -> dict:
+    """Drop extracted rules, taxonomy, document records, and uploaded PDFs."""
+    policies = load_policies()
+    documents = list_documents()
+    uploads = [path for path in UPLOADS_DIR.iterdir() if path.is_file()] if UPLOADS_DIR.exists() else []
+    POLICIES_PATH.parent.mkdir(parents=True, exist_ok=True)
+    POLICIES_PATH.write_text("[]\n")
+    if CATEGORIES_PATH.exists():
+        CATEGORIES_PATH.unlink()
+    for path in DOCUMENTS_DIR.glob("*.json") if DOCUMENTS_DIR.exists() else []:
+        path.unlink()
+    for path in uploads:
+        path.unlink()
+    return {
+        "policies_removed": len(policies),
+        "documents_removed": len(documents),
+        "uploads_removed": len(uploads),
+    }
+
+
+def load_policies() -> list[dict]:
+    """Rules in policies.json. A missing or blank file means there are none."""
+    if not POLICIES_PATH.exists():
+        return []
+    raw = POLICIES_PATH.read_text().strip()
+    if not raw:
+        return []
+    data = json.loads(raw)
+    return data if isinstance(data, list) else []
+
+
 def load_categories() -> list[dict] | None:
     if not CATEGORIES_PATH.exists():
         return None
-    return json.loads(CATEGORIES_PATH.read_text())
+    raw = CATEGORIES_PATH.read_text().strip()
+    if not raw:
+        return None
+    return json.loads(raw)
 
 
 def save_categories(categories: list[dict]) -> None:
@@ -160,7 +293,10 @@ async def get_or_generate_categories(
 
 
 def _append_json(path: Path, records: list[dict]) -> None:
-    existing = json.loads(path.read_text()) if path.exists() else []
+    raw = path.read_text().strip() if path.exists() else ""
+    existing = json.loads(raw) if raw else []
+    if not isinstance(existing, list):
+        existing = []
     existing.extend(records)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(existing, indent=2))
@@ -173,7 +309,7 @@ def update_policy(policy_id: str, updates: dict) -> dict:
     edit any structured field. Editing anything other than status bumps
     "version", per DATA_MODELS.md.
     """
-    policies = json.loads(POLICIES_PATH.read_text()) if POLICIES_PATH.exists() else []
+    policies = load_policies()
     for policy in policies:
         if policy["policy_id"] == policy_id:
             if any(field != "status" for field in updates):
@@ -217,6 +353,7 @@ async def process_documents(file_paths: list[Path]) -> list[dict]:
     policies: list[dict] = []
     for path, raw_rules in zip(file_paths, raw_rule_lists):
         for rule in raw_rules:
+            rule = canonicalize_rule(rule)
             rule, needs_review = _validate_rule(rule, tool_manifest)
             policies.append(_build_policy(rule, doc_ids[path], needs_review))
 
