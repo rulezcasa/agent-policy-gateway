@@ -1,6 +1,7 @@
 # Agent Policy Gateway
 
-Built at HP's edge AI hackathon at San Jose, won the 3rd place !
+### (Built for HP's edge AI hackathon at San Jose, won the 3rd place !)
+
 
 **A policy firewall for AI agents. Every tool call is checked against your company's own policies, on your own deployment before it runs.**
 
